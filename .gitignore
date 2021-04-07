@@ -1,0 +1,5 @@
+src/settings
+src/handler/linux/HandlerEnvironment.json
+src/handler/windows/HandlerEnvironment.json
+.idea
+
