@@ -1,2 +1,4 @@
 [[release-notes-1.0.0.0]]
 === Elastic Agent VM extension version 1.0.0.0
+
+- Releasing only the Windows vm extension

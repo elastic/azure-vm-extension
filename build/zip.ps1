@@ -7,8 +7,8 @@ function GetDirectory
 $scriptDir = GetDirectory
 
 $extensionRoot = [System.IO.Path]::GetFullPath("$scriptDir\\..")
-$deploy = $extensionRoot + "\settings\deploy\"
-$scriptDir = $extensionRoot + "\handler\"
+$deploy = $scriptDir + "\deploy\"
+$scriptDir = $extensionRoot + "\src\handler\"
 
 function Add-Zip
 {
