@@ -4,16 +4,18 @@ The ElasticAgent VM extension is a small application that provides post-deployme
 Once installed, it will download the elastic agent artifacts, install the elastic agent on the virtual machine, enroll it to Fleet and then start the agent service.
 
 
-## Platforms and version its supported:
+## Platforms supported
 
 | Platform | Version      |
 |----------|--------------|
-| Ubuntu   | 16+          |
 | Windows  | 2008r2 +     |
 | Centos   | 6.5+         |
-| RHEL     | 6+           |
-| Debian   | 9,10          |
+| Debian   | 9,10         |
 | Oracle   | 6.8+         |
+| RHEL     | 6+           |
+| Ubuntu   | 16+          |
+
+
 
 The Elastic Agent VM extension can be managed using the Azure CLI, PowerShell, Resource Manager templates, and in the future the Azure portal.
 

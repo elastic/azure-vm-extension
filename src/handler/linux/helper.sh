@@ -40,30 +40,6 @@ checkOS()
   fi
 }
 
-install_dependencies() {
-  checkOS
-  if [ "$DISTRO_OS" = "DEB" ]; then
-    sudo apt-get update
-  if [ $(dpkg-query -W -f='${Status}' curl 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-    #sudo apt-get --yes install  curl;
-    (sudo apt-get --yes install  curl || (sleep 15; sudo apt-get --yes install  curl))
-  fi
-  if [ $(dpkg-query -W -f='${Status}' jq 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-    #sudo apt-get --yes install  jq;
-    (sudo apt-get --yes install  jq || (sleep 15; apt-get --yes install  jq))
-  fi
-  elif [ "$DISTRO_OS" = "RPM" ]; then
-    #sudo yum update -y --disablerepo='*' --enablerepo='*microsoft*'
-    if ! rpm -qa | grep -qw jq; then
-      #yum install epel-release -y
-      yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm -y
-      yum install jq -y
-    fi
-  else
-    pacman -Qq | grep -qw jq || pacman -S jq
-  fi
-}
-
 get_logs_location()
 {
   SCRIPT=$(readlink -f "$0")
