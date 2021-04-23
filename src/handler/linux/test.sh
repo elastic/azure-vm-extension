@@ -4,9 +4,7 @@ set -euo pipefail
 log()
 {
   echo \[$(date +%H:%M:%ST%d-%m-%Y)\]  "$1" "$2"
-  if [ -d "/var/log/azure/" ]; then
-    echo \[$(date +%H:%M:%ST%d-%m-%Y)\]  "$1" "$2" >> /var/log/azure/install-es-agent.log
-fi
+  echo \[$(date +%H:%M:%ST%d-%m-%Y)\]  "$1" "$2" >> /var/log/azure/install-es-agent.log
 }
 
 
@@ -32,9 +30,8 @@ elif [ -f /etc/debian_version ]; then
     # Older Debian/Ubuntu/etc.
     DISTRO_NAME=Debian
     DISTRO_VERSION=$(cat /etc/debian_version)
-elif [ -f /etc/SuSe-release ]; then
-    echo -e "Unsupported OS"
-    exit 51
+#elif [ -f /etc/SuSe-release ]; then
+    # Older SuSE/etc.
 #elif [ -f /etc/redhat-release ]; then
     # Older Red Hat, CentOS, etc.
 else
@@ -74,18 +71,14 @@ install_dependencies() {
         sudo chmod +x ./jq
         sudo cp jq /usr/bin
         log "CentOS install jq finished" "INFO"
-      elif [[ $distro == "redhat"* ]] && [[ $DISTRO_VERSION == "6"* ]] ; then
+      elif [[ $distro == "redhat"* ]] && [[ $DISTRO_VERSION == "6."* ]] ; then
         log "Redhat install jq" "INFO"
         sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+        log "Redhat install jq 1" "INFO"
         sudo chmod +x ./jq
+        log "Redhat install jq 2" "INFO"
         sudo cp jq /usr/bin
-        log "Redhat install jq finished" "INFO"
-      elif [[ $distro == "oracle"* ]] && [[ $DISTRO_VERSION == "6"* ]] ; then
-        log "Redhat install jq" "INFO"
-        sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
-        sudo chmod +x ./jq
-        sudo cp jq /usr/bin
-        log "Redhat install jq finished" "INFO"
+        log "Redhat install jq 3" "INFO"
       else
         sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm -y -q
         sudo yum install jq -y
@@ -99,6 +92,26 @@ install_dependencies() {
   fi
 }
 
-install_dependencies
+
+
+if sudo service --status-all | grep -q "elastic-agent" ;then
+    echo " exists."
+    status=$(sudo service "elastic-agent" status)
+  if [[ $status == *"running"* ]]; then
+    echo "running"
+    else
+      echo "not running"
+    fi
+else
+    echo " does NOT exist."
+fi
+
+if service --status-all | grep -q "elasticee-agent";then
+    echo " exists."
+else
+    echo " does NOT exist."
+fi
+
+
 
 

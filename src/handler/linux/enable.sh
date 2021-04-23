@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-script_path=$(dirname $(realpath -s $0))
+script_path=$(dirname $(readlink -f "$0"))
 source $script_path/helper.sh
-source $script_path/config_update.sh
 
 service_name="elastic-agent"
 
@@ -18,6 +17,12 @@ sub_name="Elastic Agent"
 name_en="Enable elastic agent"
 operation_en="starting elastic agent"
 message_en="Enable elastic agent"
+
+# for status uninstall old
+name_un="Uninstall elastic agent"
+first_operation_un="unenrolling elastic agent"
+second_operation_un="uninstalling elastic agent and removing any elastic agent related folders"
+message_un="Uninstall elastic agent"
 
 checkOS
 
@@ -245,15 +250,15 @@ Install_ElasticAgent() {
 # Start Elastic Agent
 Start_ElasticAgent()
 {
-  if [ "$(pidof systemd && echo "systemd" || echo "other")" = "other" ]; then
-    log "INFO" "[Start_ElasticAgent] starting Elastic Agent"
-    sudo service elastic-agent start
-    log "INFO" "[Start_ElasticAgent] Elastic Agent started"
-    write_status "$name_en" "$operation_en" "success" "$message_en" "$sub_name" "success" "Elastic Agent service has started"
-  else
+  if [[ $(systemctl) =~ -\.mount ]]; then
     log "INFO" "[Start_ElasticAgent] enabling and starting Elastic Agent"
     sudo systemctl enable elastic-agent
     sudo systemctl start elastic-agent
+    log "INFO" "[Start_ElasticAgent] Elastic Agent started"
+    write_status "$name_en" "$operation_en" "success" "$message_en" "$sub_name" "success" "Elastic Agent service has started"
+  else
+    log "INFO" "[Start_ElasticAgent] starting Elastic Agent"
+    sudo service elastic-agent start
     log "INFO" "[Start_ElasticAgent] Elastic Agent started"
     write_status "$name_en" "$operation_en" "success" "$message_en" "$sub_name" "success" "Elastic Agent service has started"
   fi
@@ -263,50 +268,154 @@ Reconfigure_Elastic_agent_DEB_RPM() {
    log "INFO" "[Reconfigure_Elastic_agent_DEB_RPM] Stopping Elastic Agent"
    sudo systemctl stop elastic-agent
    log "INFO" "[Reconfigure_Elastic_agent_DEB_RPM] Elastic Agent stopped"
-   retry_backoff Uninstall_Old_ElasticAgent
+   Uninstall_Old_ElasticAgent
    Install_ElasticAgent
    write_status "$name_en" "$operation_en" "success" "$message_en" "$sub_name" "success" "Elastic Agent service has started"
 }
 
 Run_Agent_Other() {
+  log "INFO" "[Run_Agent_Other] prepare elastic agent for install/enable for other Linux os"
   if sudo service --status-all | grep -Fq "$service_name"; then
+      log "INFO" "[Run_Agent_Other] start Elastic Agent"
       retry_backoff Start_ElasticAgent
     else
+      log "INFO" "[Run_Agent_Other] install Elastic Agent"
       Install_ElasticAgent
     fi
 }
 
 Run_Agent_DEB_RPM() {
-  if [[ $(systemctl list-units --all -t service --full --no-legend "$service_name.service" | cut -f1 -d' ') == $service_name.service ]] && [[ $(systemctl list-units --all -t service --full --no-legend "$service_name.service" | cut -f2 -d' ') != "not-found" ]]; then
+  log "INFO" "[Start_ElasticAgent] starting Elastic Agent"
+  log "INFO" "[Run_Agent_DEB_RPM] Prepare elastic agent for DEB/RPM systems"
+
+  if [[ $(systemctl) =~ -\.mount ]]; then
+    if [[ $(systemctl list-units --all -t service --full --no-legend "$service_name.service" | cut -f1 -d' ') == $service_name.service ]] && [[ $(systemctl list-units --all -t service --full --no-legend "$service_name.service" | cut -f2 -d' ') != "not-found" ]]; then
       service_status="$(sudo systemctl is-active --quiet elastic-agent && echo Running || echo Stopped)"
-    is_new_config
-    if [[ $IS_NEW_CONFIG = true ]]; then
-      log "INFO" "[Run_Agent_DEB_RPM] New configuration has been added, the elastic agent will be reinstalled"
-      retry_backoff Reconfigure_Elastic_agent_DEB_RPM
-    fi
-    if [[ "$service_status" = "Running" ]]; then
-      log "INFO" "[Run_Agent_DEB_RPM] Elastic Agent is running"
+      is_new_config
+      if [[ $IS_NEW_CONFIG = true ]]; then
+        log "INFO" "[Run_Agent_DEB_RPM] New configuration has been added, the elastic agent will be reinstalled"
+        retry_backoff Reconfigure_Elastic_agent_DEB_RPM
+      fi
+      if [[ "$service_status" = "Running" ]]; then
+        log "INFO" "[Run_Agent_DEB_RPM] Elastic Agent is running"
+      else
+        log "INFO" "[Run_Agent_DEB_RPM] Elastic Agent is not running"
+        retry_backoff Start_ElasticAgent
+     fi
     else
-      log "INFO" "[Run_Agent_DEB_RPM] Elastic Agent is not running"
-      retry_backoff Start_ElasticAgent
+      log "INFO" "[Run_Agent_DEB_RPM] Elastic Agent is not installed"
+      Install_ElasticAgent
     fi
   else
-    log "INFO" "[Run_Agent_DEB_RPM] Elastic Agent is not installed"
-    Install_ElasticAgent
+    if sudo service --status-all | grep -q "elastic-agent" ;then
+      status=$(sudo service "elastic-agent" status)
+      is_new_config
+      if [[ $IS_NEW_CONFIG = true ]]; then
+        log "INFO" "[Run_Agent_DEB_RPM] New configuration has been added, the elastic agent will be reinstalled"
+        retry_backoff Reconfigure_Elastic_agent_DEB_RPM
+      fi
+      if [[ $status == *"running"* ]]; then
+        log "INFO" "[Run_Agent_DEB_RPM] Elastic Agent is running"
+      else
+        log "INFO" "[Run_Agent_DEB_RPM] Elastic Agent is not running"
+        retry_backoff Start_ElasticAgent
+      fi
+    else
+      log "INFO" "[Run_Agent_DEB_RPM] Elastic Agent is not installed"
+      Install_ElasticAgent
     fi
+  fi
+}
+
+#update config
+
+Unenroll_Old_ElasticAgent_DEB_RPM()
+{
+  log "INFO" "[Unenroll_Old_ElasticAgent_DEB_RPM] Unenrolling elastic agent"
+  get_prev_kibana_host
+  if [[ "$OLD_KIBANA_URL" = "" ]]; then
+    log "ERROR" "[Unenroll_Old_ElasticAgent_DEB_RPM] Kibana URL could not be found/parsed"
+    return 1
+  fi
+  get_prev_password
+  get_prev_base64Auth
+  if [ "$OLD_PASSWORD" = "" ] && [ "$OLD_BASE64_AUTH" = "" ]; then
+    log "ERROR" "[Unenroll_Old_ElasticAgent_DEB_RPM] Password could not be found/parsed"
+    return 1
+  fi
+  local cred=""
+  if [[ "$OLD_PASSWORD" != "" ]] && [ "$OLD_PASSWORD" != "null" ]; then
+    get_prev_username
+    if [[ "$OLD_USERNAME" = "" ]]; then
+      log "ERROR" "[Unenroll_Old_ElasticAgent_DEB_RPM] Username could not be found/parsed"
+      return 1
+    fi
+    cred=${OLD_USERNAME}:${OLD_PASSWORD}
+  else
+    cred=$(echo "$OLD_BASE64_AUTH" | base64 --decode)
+  fi
+  eval $(parse_yaml "/etc/elastic-agent/fleet.yml")
+  if [[ "$agent_id" = "" ]]; then
+    log "ERROR" "[Unenroll_Old_ElasticAgent_DEB_RPM] Password could not be found/parsed"
+    return 1
+  fi
+  log "INFO" "[Unenroll_Old_ElasticAgent_DEB_RPM] Agent ID is $agent_id"
+  jsonResult=$(curl -X POST "${OLD_KIBANA_URL}/api/fleet/agents/$agent_id/unenroll"  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" --data '{"force":"true"}' )
+  local EXITCODE=$?
+  if [ $EXITCODE -ne 0 ]; then
+    log "ERROR" "[Unenroll_Old_ElasticAgent_DEB_RPM] error calling $OLD_KIBANA_URL/api/fleet/agents/$agent_id/unenroll in order to unenroll the agent"
+    return $EXITCODE
+  fi
+  log "INFO" "[Unenroll_Old_ElasticAgent_DEB_RPM] Agent has been unenrolled"
+  write_status "$name_un" "$first_operation_un" "success" "$message_un" "$sub_name" "success" "Elastic Agent service has been unenrolled"
+}
+
+Uninstall_Old_ElasticAgent_DEB_RPM() {
+   if [ "$DISTRO_OS" = "RPM" ]; then
+      sudo rpm -e elastic-agent
+   fi
+   log "INFO" "[Uninstall_Old_ElasticAgent_DEB_RPM] removing Elastic Agent directories"
+   sudo systemctl stop elastic-agent
+   sudo systemctl disable elastic-agent
+   sudo rm -rf /usr/share/elastic-agent
+   sudo rm -rf /etc/elastic-agent
+   sudo rm -rf /var/lib/elastic-agent
+   sudo rm -rf /usr/bin/elastic-agent
+   sudo systemctl daemon-reload
+   sudo systemctl reset-failed
+   if [ "$DISTRO_OS" = "DEB" ]; then
+     sudo dpkg -r elastic-agent
+     sudo dpkg -P elastic-agent
+   fi
+   log "INFO" "[Uninstall_Old_ElasticAgent_DEB_RPM] Elastic Agent removed"
+}
+
+
+Uninstall_Old_ElasticAgent()
+{
+  log "INFO" "[Uninstall_Old_ElasticAgent] Unenrolling Elastic Agent"
+  retry_backoff Unenroll_Old_ElasticAgent_DEB_RPM
+  log "INFO" "[Uninstall_Old_ElasticAgent] Elastic Agent has been unenrolled"
+  if [ "$DISTRO_OS" = "DEB" ] || [ "$DISTRO_OS" = "RPM" ]; then
+    retry_backoff Uninstall_Old_ElasticAgent_DEB_RPM
+  else
+    sudo elastic-agent uninstall
+    log "INFO" "[Uninstall_Old_ElasticAgent] Elastic Agent removed"
+  fi
+  log "INFO" "Elastic Agent is uninstalled"
+  write_status "$name_un" "$second_operation_un" "success" "$message_un" "$sub_name" "error" "Elastic Agent service has been uninstalled"
 }
 
 Run_Agent()
 {
-  if [ "$(pidof systemd && echo "systemd" || echo "other")" = "other" ]; then
-    Run_Agent_Other
-  else
+  if [ "$DISTRO_OS" = "DEB" ] || [ "$DISTRO_OS" = "RPM" ]; then
     Run_Agent_DEB_RPM
+  else
+   Run_Agent_Other
   fi
 }
 
 Run_Agent
-
 
 
 

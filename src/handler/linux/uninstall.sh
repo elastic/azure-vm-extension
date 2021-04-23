@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-script_path=$(dirname $(realpath -s $0))
+script_path=$(dirname $(readlink -f "$0"))
 source $script_path/helper.sh
 
 # for status
@@ -79,11 +79,11 @@ Uninstall_ElasticAgent()
   log "INFO" "[Uninstall_ElasticAgent] Unenrolling Elastic Agent"
   retry_backoff Unenroll_ElasticAgent_DEB_RPM
   log "INFO" "[Uninstall_ElasticAgent] Elastic Agent has been unenrolled"
-  if [ "$(pidof systemd && echo "systemd" || echo "other")" == "other" ]; then
+  if [[ $(systemctl) =~ -\.mount ]]; then
+    retry_backoff Uninstall_ElasticAgent_DEB_RPM
+  else
     sudo elastic-agent uninstall
     log "INFO" "[Uninstall_ElasticAgent] Elastic Agent removed"
-  else
-    retry_backoff Uninstall_ElasticAgent_DEB_RPM
   fi
   log "INFO" "Elastic Agent is uninstalled"
   write_status "$name" "$second_operation" "success" "$message" "$sub_name" "error" "Elastic Agent service has been uninstalled"

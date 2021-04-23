@@ -9,7 +9,7 @@ Once installed, it will download the elastic agent artifacts, install the elasti
 | Platform | Version      |
 |----------|--------------|
 | Windows  | 2008r2 +     |
-| Centos   | 6.5+         |
+| Centos   | 6.10+         |
 | Debian   | 9,10         |
 | Oracle   | 6.8+         |
 | RHEL     | 6+           |
