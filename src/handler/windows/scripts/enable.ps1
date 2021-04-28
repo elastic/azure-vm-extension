@@ -38,11 +38,11 @@ function Install-ElasticAgent {
             $INSTALL= "elastic-agent-${STACK_VERSION}${OS_SUFFIX}"
             $PACKAGE="${INSTALL}.zip"
             $SHASUM="$PACKAGE.sha$ALGORITHM"
-            if (!(HasFleetServer("$STACK_VERSION"))) {
-                $DOWNLOAD_URL="https://artifacts.elastic.co/downloads/beats/elastic-agent/${PACKAGE}"
+            if (HasFleetServer("$STACK_VERSION")) {
+                $DOWNLOAD_URL= "https://snapshots.elastic.co/7.13.0-598c2261/downloads/beats/elastic-agent/${PACKAGE}"
             }
             else {
-                $DOWNLOAD_URL= "https://snapshots.elastic.co/7.13.0-598c2261/downloads/beats/elastic-agent/${PACKAGE}"
+                $DOWNLOAD_URL="https://artifacts.elastic.co/downloads/beats/elastic-agent/${PACKAGE}"
             }
             $SHASUM_URL="https://artifacts.elastic.co/downloads/beats/elastic-agent/${PACKAGE}.sha512"
             $SAVEDFILE="$env:temp\" + $PACKAGE
@@ -123,14 +123,9 @@ function Install-ElasticAgent {
                     $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "item"
                     $enrollment_token=$keyValue.api_key
                     Write-Log "Found enrollment_token $enrollment_token" "INFO"
-                    if (!(HasFleetServer("$STACK_VERSION"))) {
-                        Write-Log "Installing Elastic Agent and enrolling to Fleet $kibanaUrl" "INFO"
-                        & "$INSTALL_LOCATION\Elastic-Agent\elastic-agent.exe" install -f --kibana-url=$kibanaUrl --enrollment-token=$enrollment_token
-                    }
-                    else {
+                    if (HasFleetServer("$STACK_VERSION")) {
                         Write-Log "Getting FLeet Serverl URL" "INFO"
                         $jsonResultSettings = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/settings"  -Method 'GET' -Headers $headers -UseBasicParsing
-                        echo $jsonResultSettings
                         if ($jsonResultSettings.statuscode -eq '200')
                         {
                             $keyValue = ConvertFrom-Json $jsonResultSettings.Content | Select-Object -expand "item"
@@ -140,6 +135,10 @@ function Install-ElasticAgent {
                         }
                         Write-Log "Installing Elastic Agent and enrolling to Fleet Server $kibanaUrl" "INFO"
                         & "$INSTALL_LOCATION\Elastic-Agent\elastic-agent.exe" install -f --url=$fleetServer --enrollment-token=$enrollment_token
+                    }
+                    else {
+                        Write-Log "Installing Elastic Agent and enrolling to Fleet $kibanaUrl" "INFO"
+                        & "$INSTALL_LOCATION\Elastic-Agent\elastic-agent.exe" install -f --kibana-url=$kibanaUrl --enrollment-token=$enrollment_token
                     }
                     Write-Log "Elastic Agent has been enrolled" "INFO"
                 }else {

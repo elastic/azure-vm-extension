@@ -68,7 +68,6 @@ function Get-Kibana-URL ($powershellVersion) {
 function Get-Stack-Version {
   $powershellVersion = Get-PowershellVersion
   $elasticsearchUrl = Get-Elasticsearch-URL $powershellVersion
-  Write-Host "here $elasticsearchUrl"
   if (-Not $elasticsearchUrl) {
       throw "Elasticsearch URL could not be found"
   }
