@@ -59,7 +59,11 @@ install_dependencies() {
       (sudo apt-get --yes install  jq || (sleep 15; apt-get --yes install  jq))
     fi
   elif rpm -q -f /bin/ls >/dev/null 2>&1; then
+    distro=${DISTRO_NAME,,}
     log "[install_dependencies] distro is RPM" "INFO"
+     if [[ $distro == "red hat"*  && $DISTRO_VERSION == "6"* ]] ||  [[ $distro == "red hat"*  &&  $DISTRO_VERSION == "7.2" ]] ;then
+      sed -i -e "s/Defaults    requiretty.*/ #Defaults    requiretty/g" /etc/sudoers
+    fi
     #sudo yum update -y --disablerepo='*' --enablerepo='*microsoft*'
     if ! command -v wget &> /dev/null; then
       sudo yum install wget -y
@@ -67,14 +71,13 @@ install_dependencies() {
       log "[install_dependencies] wget is already installed" "INFO"
     fi
     if ! command -v jq &> /dev/null; then
-      distro=${DISTRO_NAME,,}
       if [[ $distro == *"centos"* ]] && [[ $DISTRO_VERSION == "6"* ]] ; then
         log "CentOS install jq" "INFO"
         sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
         sudo chmod +x ./jq
         sudo cp jq /usr/bin
         log "CentOS install jq finished" "INFO"
-      elif [[ $distro == "redhat"* ]] && [[ $DISTRO_VERSION == "6"* ]] ; then
+      elif [[ $distro == "redhat"* && $DISTRO_VERSION == "6"* ]] || [[ $distro == "red hat"* && $DISTRO_VERSION == "6"* ]] ; then
         log "Redhat install jq" "INFO"
         sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
         sudo chmod +x ./jq

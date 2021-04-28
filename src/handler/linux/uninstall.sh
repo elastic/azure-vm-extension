@@ -54,23 +54,27 @@ Unenroll_ElasticAgent_DEB_RPM()
 }
 
 Uninstall_ElasticAgent_DEB_RPM() {
-   if [ "$DISTRO_OS" = "RPM" ]; then
-      sudo rpm -e elastic-agent
-   fi
-   log "INFO" "[Uninstall_ElasticAgent] removing Elastic Agent directories"
-   sudo systemctl stop elastic-agent
-   sudo systemctl disable elastic-agent
-   sudo rm -rf /usr/share/elastic-agent
-   sudo rm -rf /etc/elastic-agent
-   sudo rm -rf /var/lib/elastic-agent
-   sudo rm -rf /usr/bin/elastic-agent
+  if [ "$DISTRO_OS" = "RPM" ]; then
+    sudo rpm -e elastic-agent
+  fi
+  log "INFO" "[Uninstall_ElasticAgent_DEB_RPM] removing Elastic Agent directories"
+  if [[ $(systemctl) =~ -\.mount ]]; then
+    sudo systemctl stop elastic-agent
+    sudo systemctl disable elastic-agent
+  fi
+  sudo rm -rf /usr/share/elastic-agent
+  sudo rm -rf /etc/elastic-agent
+  sudo rm -rf /var/lib/elastic-agent
+  sudo rm -rf /usr/bin/elastic-agent
+  if [[ $(systemctl) =~ -\.mount ]]; then
    sudo systemctl daemon-reload
    sudo systemctl reset-failed
-   if [ "$DISTRO_OS" = "DEB" ]; then
-     sudo dpkg -r elastic-agent
-     sudo dpkg -P elastic-agent
-   fi
-   log "INFO" "[uninstall_es_agent] Elastic Agent removed"
+  fi
+  if [ "$DISTRO_OS" = "DEB" ]; then
+   sudo dpkg -r elastic-agent
+   sudo dpkg -P elastic-agent
+  fi
+  log "INFO" "[Uninstall_ElasticAgent_DEB_RPM] Elastic Agent removed"
 }
 
 
@@ -79,7 +83,7 @@ Uninstall_ElasticAgent()
   log "INFO" "[Uninstall_ElasticAgent] Unenrolling Elastic Agent"
   retry_backoff Unenroll_ElasticAgent_DEB_RPM
   log "INFO" "[Uninstall_ElasticAgent] Elastic Agent has been unenrolled"
-  if [[ $(systemctl) =~ -\.mount ]]; then
+  if [ "$DISTRO_OS" = "DEB" ] || [ "$DISTRO_OS" = "RPM" ]; then
     retry_backoff Uninstall_ElasticAgent_DEB_RPM
   else
     sudo elastic-agent uninstall
