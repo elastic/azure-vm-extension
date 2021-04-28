@@ -46,6 +46,15 @@ fi
 
 install_dependencies() {
   get_distro
+  distro=${DISTRO_NAME,,}
+  if [[ "$distro" = "sles" ]] || [[ "$distro" = *"suse"* ]] || [[ "$distro" = *"flatcar"* ]] ; then
+    echo -e "Unsupported OS"
+    exit 51
+  fi
+  if [[ $distro == "redhat"* && $DISTRO_VERSION == "6"* ]] || [[ $distro == "red hat"* && $DISTRO_VERSION == "6"* ]] ; then
+    echo -e "Unsupported OS"
+    exit 51
+  fi
   log "distro: $DISTRO_NAME version: $DISTRO_VERSION" "INFO"
   if dpkg -S /bin/ls >/dev/null 2>&1; then
     log "[install_dependencies] distro is Debian" "INFO"
@@ -59,7 +68,6 @@ install_dependencies() {
       (sudo apt-get --yes install  jq || (sleep 15; apt-get --yes install  jq))
     fi
   elif rpm -q -f /bin/ls >/dev/null 2>&1; then
-    distro=${DISTRO_NAME,,}
     log "[install_dependencies] distro is RPM" "INFO"
      if [[ $distro == "red hat"*  && $DISTRO_VERSION == "6"* ]] ||  [[ $distro == "red hat"*  &&  $DISTRO_VERSION == "7.2" ]] ;then
       sed -i -e "s/Defaults    requiretty.*/ #Defaults    requiretty/g" /etc/sudoers
@@ -77,12 +85,6 @@ install_dependencies() {
         sudo chmod +x ./jq
         sudo cp jq /usr/bin
         log "CentOS install jq finished" "INFO"
-      elif [[ $distro == "redhat"* && $DISTRO_VERSION == "6"* ]] || [[ $distro == "red hat"* && $DISTRO_VERSION == "6"* ]] ; then
-        log "Redhat install jq" "INFO"
-        sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
-        sudo chmod +x ./jq
-        sudo cp jq /usr/bin
-        log "Redhat install jq finished" "INFO"
       elif [[ $distro == "oracle"* ]] && [[ $DISTRO_VERSION == "6"* ]] ; then
         log "Redhat install jq" "INFO"
         sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
