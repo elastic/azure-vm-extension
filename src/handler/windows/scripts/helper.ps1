@@ -68,6 +68,7 @@ function Get-Kibana-URL ($powershellVersion) {
 function Get-Stack-Version {
   $powershellVersion = Get-PowershellVersion
   $elasticsearchUrl = Get-Elasticsearch-URL $powershellVersion
+  Write-Host "here $elasticsearchUrl"
   if (-Not $elasticsearchUrl) {
       throw "Elasticsearch URL could not be found"
   }
@@ -105,6 +106,21 @@ function Get-Stack-Version {
       return ""
    }
   return ""
+}
+
+function HasFleetServer {
+    param([string]$esVersion)
+    $major=$esVersion.split(".")[0]
+    $minor=$esVersion.split(".")[1]
+    $intMajor = [int]$major
+    $intMinor= [int]$minor
+    if ($intMajor -gt 7)
+    {
+        return $true
+    } elseif ($intMinor -gt 12 ) {
+        return $true
+    }
+    return $false
 }
 
 function Get-PublicSettings-From-Config-Json($key, $powershellVersion) {
