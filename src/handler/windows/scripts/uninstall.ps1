@@ -13,7 +13,7 @@ $subName = "Elastic Agent"
 $serviceName = 'elastic agent'
 
 function Uninstall-ElasticAgent {
-    $INSTALL_LOCATION="C:\Program Files"
+    $INSTALL_LOCATION="C:\Program Files"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      $INSTALL_LOCATION="C:\Program Files"
     $retries = 3
     $retryCount = 0
     $completed = $false

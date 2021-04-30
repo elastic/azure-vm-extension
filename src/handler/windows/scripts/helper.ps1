@@ -391,7 +391,7 @@ function Get-Agent-Id($fileLocation){
 
 function Get-Default-Policy($content){
     foreach ($policy in $content) {
-        if ($policy.name  -like "Default" -And $policy.active -eq "true") {
+        if ($policy.name  -like  "*Default*" -And $policy.active -eq "true") {
         return $policy.id
           }
     }

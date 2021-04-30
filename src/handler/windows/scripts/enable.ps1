@@ -39,7 +39,7 @@ function Install-ElasticAgent {
             $PACKAGE="${INSTALL}.zip"
             $SHASUM="$PACKAGE.sha$ALGORITHM"
             if (HasFleetServer("$STACK_VERSION")) {
-                $DOWNLOAD_URL= "https://snapshots.elastic.co/7.13.0-598c2261/downloads/beats/elastic-agent/${PACKAGE}"
+                $DOWNLOAD_URL= "https://artifacts-api.elastic.co/v1/downloads/beats/${PACKAGE}"
             }
             else {
                 $DOWNLOAD_URL="https://artifacts.elastic.co/downloads/beats/elastic-agent/${PACKAGE}"
@@ -133,8 +133,8 @@ function Install-ElasticAgent {
                         } else {
                             throw "Retrieving Fleet Server URL has failed, please check if it has been enabled."
                         }
-                        Write-Log "Installing Elastic Agent and enrolling to Fleet Server $kibanaUrl" "INFO"
-                        & "$INSTALL_LOCATION\Elastic-Agent\elastic-agent.exe" install -f --url=$fleetServer --enrollment-token=$enrollment_token
+                        Write-Log "Installing Elastic Agent and enrolling to Fleet Server $fleetServer" "INFO"
+                        & "$INSTALL_LOCATION\Elastic-Agent\elastic-agent.exe" install -f --url=$fleetServer --enrollment-token=$enrollment_token --insecure
                     }
                     else {
                         Write-Log "Installing Elastic Agent and enrolling to Fleet $kibanaUrl" "INFO"
