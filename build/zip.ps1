@@ -27,7 +27,7 @@ function Add-Zip-Linux
     param([string]$zipfilename)
     $dir = $scriptDir + $zipfilename
     $compress = @{
-        LiteralPath= "$dir\HandlerManifest.json", "$dir\install.sh", "$dir\enable.sh", "$dir\disable.sh", "$dir\uninstall.sh", "$dir\update.sh", "$dir\config_update.sh", "$dir\helper.sh"
+        LiteralPath= "$dir\HandlerManifest.json", "$dir\install.sh", "$dir\enable.sh", "$dir\disable.sh", "$dir\uninstall.sh", "$dir\update.sh","$dir\newconfig.sh", "$dir\helper.sh"
         CompressionLevel = "Fastest"
         DestinationPath = "$deploy\$zipfilename.zip"
     }

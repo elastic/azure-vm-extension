@@ -69,7 +69,7 @@ log()
     get_logs_location
   fi
   echo \[$(date +%H:%M:%ST%d-%m-%Y)\]  "$1" "$2"
-  echo \[$(date +%H:%M:%ST%d-%m-%Y)\]  "$1" "$2" >> $LOGS_FOLDER/es-agent.log
+  echo \[$(date +%H:%M:%ST%d-%m-%Y)\]  "$1" "$2" >> "$LOGS_FOLDER"/es-agent.log
 }
 
 checkShasum ()
@@ -329,20 +329,11 @@ write_status() {
   fi
 }
 
-service_exists() {
-    local n=$1
-    if [[ $(systemctl list-units --all -t service --full --no-legend "$n.service" | cut -f1 -d' ') == $n.service ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
 # encryption
 
 encrypt() {
-  cert_path="/mnt/c/Users/maria/Downloads/test/waagent/$1.crt"
-  private_key_path="/mnt/c/Users/maria/Downloads/test/waagent/$1.prv"
+  cert_path=".../waagent/$1.crt"
+  private_key_path=".../waagent/$1.prv"
   if [[ -f "$cert_path" ]] && [[ -f "$private_key_path" ]]; then
     openssl cms -encrypt -in <(echo "$2") -inkey $private_key_path -recip $cert_path -inform dem
   else
@@ -382,6 +373,7 @@ get_base64Auth() {
 # update config
 
 is_new_config(){
+  log "INFO" "[is_new_config] Check if new config"
   currentSequence=""
   newSequence=""
   isUpdate=""
