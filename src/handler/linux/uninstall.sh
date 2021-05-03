@@ -43,7 +43,15 @@ Unenroll_ElasticAgent_DEB_RPM()
     return 1
   fi
   log "INFO" "[Unenroll_ElasticAgent_DEB_RPM] Agent ID is $agent_id"
-  jsonResult=$(curl -X POST "${KIBANA_URL}/api/fleet/agents/$agent_id/unenroll"  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" --data '{"force":"true"}' )
+  if [[ $STACK_VERSION = "" ]]; then
+    get_cloud_stack_version
+  fi
+  has_fleet_server $STACK_VERSION
+  data='{"force":"true"}'
+  if [[ $IS_FLEET_SERVER = true ]]; then
+    data='{"revoke":"true"}'
+  fi
+  jsonResult=$(curl -X POST "${KIBANA_URL}/api/fleet/agents/$agent_id/unenroll"  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" --data $data )
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
     log "ERROR" "[Unenroll_ElasticAgent_DEB_RPM] error calling $KIBANA_URL/api/fleet/agents/$agent_id/unenroll in order to unenroll the agent"

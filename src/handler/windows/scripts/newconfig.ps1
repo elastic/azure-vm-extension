@@ -57,6 +57,10 @@ function Uninstall-Old-ElasticAgent {
             }
             $headers.Add('Authorization', "Basic $encodedCredentials")
             $body = (@{ 'force' = $true } | ConvertTo-Json)
+            $OLD_STACK_VERSION = Get-Prev-Stack-Version
+            if (HasFleetServer("$OLD_STACK_VERSION")) {
+                $body=(@{'revoke' = $true} | ConvertTo-Json)
+            }
             $jsonResult = ''
             if ( $powershellVersion -gt 3 ) {
                 $headers.Add("Accept","application/json")

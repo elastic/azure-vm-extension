@@ -23,45 +23,50 @@ message_en="Enable elastic agent"
 
 Install_ElasticAgent_DEB()
 {
-    local os_suffix="-amd64"
-    local algorithm="512"
-    get_cloud_stack_version
-    if [ $STACK_VERSION = "" ]; then
-       log "ERROR" "[install_es_ag_deb] Stack version could not be found"
-       return 1
-    else
+  local os_suffix="-amd64"
+  local algorithm="512"
+  get_cloud_stack_version
+  if [ $STACK_VERSION = "" ]; then
+    log "ERROR" "[install_es_ag_deb] Stack version could not be found"
+    return 1
+  else
     log "INFO" "[Install_ElasticAgent_DEB] installing Elastic Agent $STACK_VERSION"
     local package="elastic-agent-${STACK_VERSION}${os_suffix}.deb"
     local shasum="$package.sha$algorithm"
-    local download_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}"
-    local shasum_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}.sha512"
+    has_fleet_server $STACK_VERSION
+    if [[ $IS_FLEET_SERVER = true ]]; then
+      local download_url="https://artifacts-api.elastic.co/v1/downloads/beats/${package}"
+      local shasum_url="https://artifacts-api.elastic.co/v1/downloads/beats/${package}.sha512"
+    else
+      local download_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}"
+      local shasum_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}.sha512"
+    fi
     wget --retry-connrefused --waitretry=1 "$shasum_url" -O "$shasum"
     local EXIT_CODE=$?
     if [[ $EXIT_CODE -ne 0 ]]; then
-        log "ERROR" "[Install_ElasticAgent_DEB] error downloading Elastic Agent $STACK_VERSION sha$algorithm checksum"
-        return $EXIT_CODE
+      log "ERROR" "[Install_ElasticAgent_DEB] error downloading Elastic Agent $STACK_VERSION sha$algorithm checksum"
+      return $EXIT_CODE
     fi
     log "[Install_ElasticAgent_DEB] download location - $download_url" "INFO"
     wget --retry-connrefused --waitretry=1 "$download_url" -O $package
     EXIT_CODE=$?
     if [[ $EXIT_CODE -ne 0 ]]; then
-    log "ERROR" "[Install_ElasticAgent_DEB] error downloading Elastic Agent $STACK_VERSION"
-        return $EXIT_CODE
+      log "ERROR" "[Install_ElasticAgent_DEB] error downloading Elastic Agent $STACK_VERSION"
+      return $EXIT_CODE
     fi
     log "INFO" "[Install_ElasticAgent_DEB] downloaded Elastic Agent $STACK_VERSION"
     write_status "$name" "$first_operation" "transitioning" "$message" "$sub_name" "success" "Elastic Agent package has been downloaded"
     #checkShasum $package $shasum
     EXIT_CODE=$?
     if [[ $EXIT_CODE -ne 0 ]]; then
-        log "ERROR" "[Install_ElasticAgent_DEB] error validating checksum for Elastic Agent $STACK_VERSION"
-        return $EXIT_CODE
+      log "ERROR" "[Install_ElasticAgent_DEB] error validating checksum for Elastic Agent $STACK_VERSION"
+      return $EXIT_CODE
     fi
-
     sudo dpkg -i $package
     sudo apt-get install -f
     log "INFO" "[Install_ElasticAgent_DEB] installed Elastic Agent $STACK_VERSION"
     write_status "$name" "$first_operation" "success" "$message" "$sub_name" "success" "Elastic Agent has been installed"
- fi
+  fi
 }
 
 Install_ElasticAgent_RPM()
@@ -75,8 +80,13 @@ Install_ElasticAgent_RPM()
     else
       local package="elastic-agent-${STACK_VERSION}${os_suffix}.rpm"
       local shasum="$package.sha$algorithm"
-      local download_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}"
-      local shasum_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}.sha512"
+      if [[ $IS_FLEET_SERVER = true ]]; then
+        local download_url="https://artifacts-api.elastic.co/v1/downloads/beats/${package}"
+        local shasum_url="https://artifacts-api.elastic.co/v1/downloads/beats/${package}.sha512"
+      else
+        local download_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}"
+        local shasum_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}.sha512"
+      fi
       log "INFO" "[Install_ElasticAgent_RPM] installing Elastic Agent $STACK_VERSION"
       wget --retry-connrefused --waitretry=1 "$shasum_url" -O "$shasum"
       local EXIT_CODE=$?
@@ -164,17 +174,14 @@ Enroll_ElasticAgent() {
   else
     cred=$(echo "$BASE64_AUTH" | base64 --decode)
   fi
+  if [[ $STACK_VERSION = "" ]]; then
+    get_cloud_stack_version
+  fi
   #enable Fleet
   result=$(curl -X POST "${KIBANA_URL}"/api/fleet/setup  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
     log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/setup in order to enable Kibana Fleet $result"
-    return $EXITCODE
-  fi
-  result=$(curl -X POST "${KIBANA_URL}"/api/fleet/agents/setup  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
-  local EXITCODE=$?
-  if [ $EXITCODE -ne 0 ]; then
-    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/setup in order to enable Kibana Fleet Agents $result"
     return $EXITCODE
   fi
   #end enable Fleet
@@ -211,15 +218,27 @@ Enroll_ElasticAgent() {
   fi
   log "INFO" "[Enroll_ElasticAgent] enrolment_token is $enrolment_token"
   log "INFO" "[Enroll_ElasticAgent] Enrolling the Elastic Agent to Fleet ${KIBANA_URL}"
-  if [[ $STACK_VERSION = "" ]]; then
-    get_cloud_stack_version
-  fi
-  if [[ $STACK_VERSION = 7.12*  ]]; then
+  has_flag_version $STACK_VERSION
+  has_fleet_server $STACK_VERSION
+  if [[ $IS_FLEET_SERVER = true ]]; then
+    log "INFO" "[Enroll_ElasticAgent] Getting Fleet Server info"
+    jsonResult=$(curl ${KIBANA_URL}/api/fleet/settings \
+        -H 'Content-Type: application/json' \
+        -H 'kbn-xsrf: true' \
+        -u "$cred" )
+    EXITCODE=$?
+    if [ $EXITCODE -ne 0 ]; then
+      log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/settings in order to retrieve the Fleet Server URL"
+      return $EXITCODE
+    fi
+    fleet_server=$(echo $jsonResult | jq -r '.item.fleet_server_hosts.[0]')
+    log "INFO" "[Enroll_ElasticAgent] Found fleet server $fleet_server"
+    sudo elastic-agent enroll  --url="${fleet_server}" --enrollment-token="$enrolment_token" -f
+  elif [[ $HAS_FLAG_VERSION = true  ]]; then
     sudo elastic-agent enroll  --kibana-url="${KIBANA_URL}" --enrollment-token="$enrolment_token" -f
   else
     sudo elastic-agent enroll  "${KIBANA_URL}" "$enrolment_token" -f
   fi
-
   write_status "$name" "$second_operation" "success" "$message" "$sub_name" "success" "Elastic Agent has been enrolled"
   set_sequence_to_file
 }

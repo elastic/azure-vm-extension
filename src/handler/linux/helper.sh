@@ -15,6 +15,8 @@ KIBANA_URL=""
 POLICY_ID=""
 LINUX_CERT_PATH="/var/lib/waagent"
 IS_NEW_CONFIG=""
+OLD_STACK_VERSION=""
+OLD_ELASTICSEARCH_URL=""
 OLD_KIBANA_URL=""
 OLD_USERNAME=""
 OLD_PASSWORD=""
@@ -23,6 +25,8 @@ OLD_CONFIG_FILE=""
 OLD_CLOUD_ID=""
 OLD_PROTECTED_SETTINGS=""
 OLD_THUMBPRINT=""
+IS_FLEET_SERVER=""
+HAS_FLAG_VERSION=""
 
 checkOS()
 {
@@ -247,6 +251,29 @@ function parse_yaml {
          printf("%s%s=\"%s\"\n",vn, $2, $3);
       }
    }'
+}
+
+function has_fleet_server {
+  eval es_version="$1"
+  IS_FLEET_SERVER=false
+  major=$(echo $es_version | cut -f1 -d.)
+  minor=$(echo $es_version | cut -f2 -d.)
+  if [[ $major -gt 7 ]];then
+    IS_FLEET_SERVER=true
+  fi
+  if [[ $minor -gt 12 ]]; then
+    IS_FLEET_SERVER=true
+  fi
+}
+
+function has_flag_version {
+  eval es_version="$1"
+  HAS_FLAG_VERSION=false
+  major=$(echo $es_version | cut -f1 -d.)
+  minor=$(echo $es_version | cut -f2 -d.)
+  if [[ $major -eq 7 ]] && [[ $minor -eq 12 ]] ;then
+    HAS_FLAG_VERSION=true
+  fi
 }
 
 function retry_backoff() {
@@ -494,6 +521,20 @@ get_prev_kibana_host () {
 
 }
 
+get_prev_elasticsearch_host () {
+  get_prev_cloud_id
+  if [ "$OLD_CLOUD_ID" != "" ]; then
+    cloud_hash=$(echo $OLD_CLOUD_ID | cut -f2 -d:)
+    cloud_tokens=$(echo $cloud_hash | base64 -d -)
+    host_port=$(echo $cloud_tokens | cut -f1 -d$)
+    OLD_ELASTICSEARCH_URL="https://$(echo $cloud_tokens | cut -f2 -d$).${host_port}"
+    log "INFO" "[get_prev_elasticsearch_host] Found ES uri $OLD_ELASTICSEARCH_URL"
+  else
+    log "ERROR" "[get_prev_elasticsearch_host] Cloud ID could not be parsed"
+    exit 1
+  fi
+}
+
 get_prev_protected_settings()
 {
   get_prev_configuration_location
@@ -545,4 +586,38 @@ get_prev_base64Auth() {
     log "ERROR" "[get_prev_base64Auth] Decryption failed. Could not find certificates"
     exit 1
   fi
+}
+
+get_prev_cloud_stack_version () {
+  log "INFO" "[get_prev_cloud_stack_version] Get ES cluster URL"
+  get_prev_elasticsearch_host
+  if [ "$OLD_ELASTICSEARCH_URL" = "" ]; then
+    log "ERROR" "[get_prev_cloud_stack_version] Elasticsearch URL could not be found"
+    exit 1
+  fi
+  get_prev_password
+  get_prev_base64Auth
+   if [ "$OLD_PASSWORD" = "" ] && [ "$OLD_BASE64_AUTH" = "" ]; then
+    log "ERROR" "[get_prev_cloud_stack_version] Both PASSWORD and BASE64AUTH key could not be found"
+    exit 1
+  fi
+  local cred=""
+  if [ "$OLD_PASSWORD" != "" ] && [ "$OLD_PASSWORD" != "null" ]; then
+    get_prev_username
+    if [ "$OLD_USERNAME" = "" ]; then
+      log "ERROR" "[get_prev_cloud_stack_version] USERNAME could not be found"
+      exit 1
+    fi
+    cred=${OLD_USERNAME}:${OLD_PASSWORD}
+  else
+    cred=$(echo "$OLD_BASE64_AUTH" | base64 --decode)
+  fi
+  json_result=$(curl "${OLD_ELASTICSEARCH_URL}"  -H 'Content-Type: application/json' -u $cred)
+  local EXITCODE=$?
+  if [ $EXITCODE -ne 0 ]; then
+      log "ERROR" "[get_prev_cloud_stack_version] error pinging $OLD_ELASTICSEARCH_URL"
+      exit $EXITCODE
+  fi
+  OLD_STACK_VERSION=$(echo $json_result | jq -r '.version.number')
+  log "INFO" "[get_prev_cloud_stack_version] Stack version found is $OLD_STACK_VERSION"
 }

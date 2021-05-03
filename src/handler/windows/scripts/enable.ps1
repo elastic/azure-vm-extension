@@ -3,7 +3,7 @@ $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDirectory helper.ps1)
 $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
-. (Join-Path $ScriptDirectory config-update.ps1)
+. (Join-Path $ScriptDirectory newconfig.ps1)
 
 # for status enable
 $nameE = "Enable elastic agent"
@@ -95,12 +95,6 @@ function Install-ElasticAgent {
             $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/setup"  -Method 'POST' -Headers $headers -UseBasicParsing
             if ($jsonResult.statuscode -eq '200') {
                 Write-Log "Enable Fleet is now available $jsonResult" "INFO"
-                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agents/setup"  -Method 'POST' -Headers $headers -UseBasicParsing
-                if ($jsonResult.statuscode -eq '200') {
-                    Write-Log "Enable Fleet agents if now available $jsonResult" "INFO"
-                }else {
-                    throw "Enabling Fleet Agents failed with $jsonResult.statuscode"
-                }
             }
             else {
                 throw "Enabling Fleet failed with $jsonResult.statuscode"

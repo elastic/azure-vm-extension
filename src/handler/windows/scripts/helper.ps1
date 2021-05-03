@@ -733,3 +733,58 @@ function Get-Prev-Kibana-URL($powershellVersion) {
     }
     return ""
 }
+
+function Get-Prev-Elasticsearch-URL($powershellVersion) {
+    $powershellVersion = Get-PowershellVersion
+    $cloudId = Get-Prev-CloudId $powershellVersion
+    if ( $cloudId -ne ""){
+        $cloudHash=$cloudId.split(":")[-1]
+        $cloudTokens=[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($cloudHash))
+        $cloudElems=$cloudTokens.split("$")
+        $hostPort= $cloudElems[0]
+        return "https://$($cloudElems[1]).$(${hostPort})"
+    }
+    return ""
+}
+
+function Get-Prev-Stack-Version {
+    $powershellVersion = Get-PowershellVersion
+    $elasticsearchUrl = Get-Prev-Elasticsearch-URL $powershellVersion
+    if (-Not $elasticsearchUrl) {
+        throw "Elasticsearch URL could not be found"
+    }
+    $password = Get-Prev-Password $powershellVersion
+    $base64Auth = Get-Prev-Base64Auth $powershellVersion
+    if (-Not $password -And -Not $base64Auth) {
+        throw "Password  or base64auto key could not be found"
+    }
+    $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+    if ( $powershellVersion -gt 3 ) {
+        $headers.Add("Accept","application/json")
+    }
+    #cred
+    $encodedCredentials = ""
+    if ($password) {
+        $username = Get-Prev-Username $powershellVersion
+        if (-Not $username) {
+            throw "Username could not be found"
+        }
+        $pair = "$($username):$($password)"
+        $encodedCredentials = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+    } else {
+        $encodedCredentials = $base64Auth
+    }
+    $headers.Add('Authorization', "Basic $encodedCredentials")
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $jsonResult = Invoke-WebRequest -Uri "$($elasticsearchUrl)"  -Method 'GET' -Headers $headers -UseBasicParsing
+    if ($jsonResult.statuscode -eq '200') {
+        $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand ""
+        $stackVersion=$keyValue.version.number
+        Write-Log "Found stack version  $stackVersion" "INFO"
+        return $stackVersion
+    }else {
+        Write-Log "Error pinging elastic cluster $elasticsearchUrl" "ERROR"
+        return ""
+    }
+    return ""
+}
