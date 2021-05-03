@@ -34,6 +34,6 @@ function Add-Zip-Linux
     Compress-Archive @compress  -Force
 }
 
-#Add-Zip "windows"
+Add-Zip "windows"
 Add-Zip-Linux "linux"
 
