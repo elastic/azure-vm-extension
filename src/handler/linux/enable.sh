@@ -21,98 +21,79 @@ message_en="Enable elastic agent"
 
 # Install Elastic Agent
 
-Install_ElasticAgent_DEB()
+Install_ElasticAgent_DEB_RPM()
 {
-  local os_suffix="-amd64"
-  local algorithm="512"
+  local algorithm="sha512"
   get_cloud_stack_version
   if [ $STACK_VERSION = "" ]; then
-    log "ERROR" "[install_es_ag_deb] Stack version could not be found"
+    log "ERROR" "[Install_ElasticAgent_DEB_RPM] Stack version could not be found"
     return 1
   else
-    log "INFO" "[Install_ElasticAgent_DEB] installing Elastic Agent $STACK_VERSION"
-    local package="elastic-agent-${STACK_VERSION}${os_suffix}.deb"
-    local shasum="$package.sha$algorithm"
-    has_fleet_server $STACK_VERSION
-    if [[ $IS_FLEET_SERVER = true ]]; then
-      local download_url="https://artifacts-api.elastic.co/v1/downloads/beats/${package}"
-      local shasum_url="https://artifacts-api.elastic.co/v1/downloads/beats/${package}.sha512"
-    else
-      local download_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}"
-      local shasum_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}.sha512"
+    log "INFO" "[Install_ElasticAgent_DEB_RPM] installing Elastic Agent $STACK_VERSION"
+    if [ "$DISTRO_OS" = "DEB" ]; then
+      package="elastic-agent-${STACK_VERSION}-amd64.deb"
+    elif [ "$DISTRO_OS" = "RPM" ]; then
+      package="elastic-agent-${STACK_VERSION}-x86_64.rpm"
     fi
-    wget --retry-connrefused --waitretry=1 "$shasum_url" -O "$shasum"
-    local EXIT_CODE=$?
-    if [[ $EXIT_CODE -ne 0 ]]; then
-      log "ERROR" "[Install_ElasticAgent_DEB] error downloading Elastic Agent $STACK_VERSION sha$algorithm checksum"
-      return $EXIT_CODE
-    fi
-    log "[Install_ElasticAgent_DEB] download location - $download_url" "INFO"
-    wget --retry-connrefused --waitretry=1 "$download_url" -O $package
-    EXIT_CODE=$?
-    if [[ $EXIT_CODE -ne 0 ]]; then
-      log "ERROR" "[Install_ElasticAgent_DEB] error downloading Elastic Agent $STACK_VERSION"
-      return $EXIT_CODE
-    fi
-    log "INFO" "[Install_ElasticAgent_DEB] downloaded Elastic Agent $STACK_VERSION"
-    write_status "$name" "$first_operation" "transitioning" "$message" "$sub_name" "success" "Elastic Agent package has been downloaded"
-    #checkShasum $package $shasum
-    EXIT_CODE=$?
-    if [[ $EXIT_CODE -ne 0 ]]; then
-      log "ERROR" "[Install_ElasticAgent_DEB] error validating checksum for Elastic Agent $STACK_VERSION"
-      return $EXIT_CODE
-    fi
-    sudo dpkg -i $package
-    sudo apt-get install -f
-    log "INFO" "[Install_ElasticAgent_DEB] installed Elastic Agent $STACK_VERSION"
-    write_status "$name" "$first_operation" "success" "$message" "$sub_name" "success" "Elastic Agent has been installed"
-  fi
-}
-
-Install_ElasticAgent_RPM()
-{
-    local os_suffix="-x86_64"
-    local algorithm="512"
-    get_cloud_stack_version
-    if [[ $STACK_VERSION = "" ]]; then
-       log "ERROR" "[Install_ElasticAgent_RPM] Stack version could not be found"
-       return 1
-    else
-      local package="elastic-agent-${STACK_VERSION}${os_suffix}.rpm"
-      local shasum="$package.sha$algorithm"
-      if [[ $IS_FLEET_SERVER = true ]]; then
-        local download_url="https://artifacts-api.elastic.co/v1/downloads/beats/${package}"
-        local shasum_url="https://artifacts-api.elastic.co/v1/downloads/beats/${package}.sha512"
-      else
-        local download_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}"
-        local shasum_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}.sha512"
+    local shasum="$package.$algorithm"
+    local release_url="https://artifacts.elastic.co/downloads/beats/elastic-agent/"
+    local staging_url="https://artifacts-api.elastic.co/v1/downloads/beats/"
+    if [[ $(wget -S --spider "${release_url}${package}"  2>&1 | grep 'HTTP/1.1 200 OK') ]] ; then
+      log "[Install_ElasticAgent_DEB_RPM] download location - ${release_url}${package}" "INFO"
+      wget --retry-connrefused --waitretry=1 "${release_url}${package}" -O $package
+      EXIT_CODE=$?
+      if [[ $EXIT_CODE -ne 0 ]]; then
+        log "ERROR" "[Install_ElasticAgent_DEB_RPM] error downloading Elastic Agent $STACK_VERSION"
+        return $EXIT_CODE
       fi
-      log "INFO" "[Install_ElasticAgent_RPM] installing Elastic Agent $STACK_VERSION"
-      wget --retry-connrefused --waitretry=1 "$shasum_url" -O "$shasum"
+      log "INFO" "[Install_ElasticAgent_DEB_RPM] downloaded Elastic Agent $STACK_VERSION"
+      wget --retry-connrefused --waitretry=1 "${release_url}${package}.${algorithm}" -O "$shasum"
       local EXIT_CODE=$?
       if [[ $EXIT_CODE -ne 0 ]]; then
-        log "ERROR" "[Install_ElasticAgent_RPM] error downloading Elastic Agent $STACK_VERSION sha$algorithm checksum"
+        log "ERROR" "[Install_ElasticAgent_DEB_RPM] error downloading Elastic Agent $STACK_VERSION $algorithm checksum"
         return $EXIT_CODE
       fi
-      log "INFO" "[Install_ElasticAgent_RPM] download location - $download_url"
-      wget --retry-connrefused --waitretry=1 "$download_url" -O $package
+      checkShasum $package $shasum
       EXIT_CODE=$?
       if [[ $EXIT_CODE -ne 0 ]]; then
-        log "ERROR" "[Install_ElasticAgent_RPM] error downloading Elastic Agent $STACK_VERSION"
+        log "ERROR" "[Install_ElasticAgent_DEB_RPM] error validating checksum for Elastic Agent $STACK_VERSION"
         return $EXIT_CODE
       fi
-      log "INFO" "[Install_ElasticAgent_RPM] downloaded Elastic Agent $STACK_VERSION"
-      write_status "$name" "$first_operation" "transitioning" "$message" "$sub_name" "success" "Elastic Agent package has been downloaded"
-      #checkShasum $package $shasum
+    elif [[ $(wget -S --spider "${staging_url}${package}"  2>&1 | grep 'HTTP/1.1 200 OK') ]] ; then
+      log "[Install_ElasticAgent_DEB_RPM] download location - $staging_url" "INFO"
+      wget --retry-connrefused --waitretry=1 "${staging_url}${package}" -O $package
       EXIT_CODE=$?
       if [[ $EXIT_CODE -ne 0 ]]; then
-        log "ERROR" "[Install_ElasticAgent_RPM] error validating checksum for Elastic Agent $STACK_VERSION"
+        log "ERROR" "[Install_ElasticAgent_DEB_RPM] error downloading Elastic Agent $STACK_VERSION"
         return $EXIT_CODE
       fi
-      sudo rpm -vi $package
-      log "INFO" "[Install_ElasticAgent_RPM] installed Elastic Agent $STACK_VERSION"
-      write_status "$name" "$first_operation" "success" "$message" "$sub_name" "success" "Elastic Agent has been installed"
+      log "INFO" "[Install_ElasticAgent_DEB_RPM] downloaded Elastic Agent $STACK_VERSION"
+      wget --retry-connrefused --waitretry=1 "${staging_url}${package}.${algorithm}" -O "$shasum"
+      local EXIT_CODE=$?
+      if [[ $EXIT_CODE -ne 0 ]]; then
+        log "ERROR" "[Install_ElasticAgent_DEB_RPM] error downloading Elastic Agent $STACK_VERSION $algorithm checksum"
+        return $EXIT_CODE
+      fi
+      checkShasum $package $shasum
+      EXIT_CODE=$?
+      if [[ $EXIT_CODE -ne 0 ]]; then
+        log "ERROR" "[Install_ElasticAgent_DEB_RPM] error validating checksum for Elastic Agent $STACK_VERSION"
+        return $EXIT_CODE
+      fi
+    else
+     log "ERROR" "[Install_ElasticAgent_DEB_RPM] could not find any artifacts"
+     return 1
     fi
+    write_status "$name" "$first_operation" "transitioning" "$message" "$sub_name" "success" "Elastic Agent package has been downloaded"
+    if [ "$DISTRO_OS" = "DEB" ]; then
+      sudo dpkg -i $package
+      sudo apt-get install -f
+    elif [ "$DISTRO_OS" = "RPM" ]; then
+      sudo rpm -vi $package
+    fi
+    log "INFO" "[Install_ElasticAgent_DEB_RPM] installed Elastic Agent $STACK_VERSION"
+    write_status "$name" "$first_operation" "success" "$message" "$sub_name" "success" "Elastic Agent has been installed"
+  fi
 }
 
 Install_ElasticAgent_OTHER()
@@ -245,10 +226,8 @@ Enroll_ElasticAgent() {
 
 
 Install_ElasticAgent() {
-  if [ "$DISTRO_OS" = "DEB" ]; then
-    retry_backoff  Install_ElasticAgent_DEB
-  elif [ "$DISTRO_OS" = "RPM" ]; then
-    retry_backoff  Install_ElasticAgent_RPM
+  if [ "$DISTRO_OS" = "DEB" ] || [ "$DISTRO_OS" = "RPM" ]; then
+    retry_backoff  Install_ElasticAgent_DEB_RPM
   else
     retry_backoff  Install_ElasticAgent_OTHER
   fi

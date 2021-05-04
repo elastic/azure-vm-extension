@@ -81,16 +81,12 @@ checkShasum ()
   local archive_file_name="${1}"
   local authentic_checksum_file="${2}"
   echo  --check <(grep "\s${archive_file_name}$" "${authentic_checksum_file}")
-
-  if $(which sha256sum >/dev/null 2>&1); then
-    sha256sum \
-      --check <(grep "\s${archive_file_name}$" "${authentic_checksum_file}")
-  elif $(which shasum >/dev/null 2>&1); then
+  if $(which shasum >/dev/null 2>&1); then
     shasum \
       -a 256 \
       --check <(grep "\s${archive_file_name}$" "${authentic_checksum_file}")
   else
-    echo "sha256sum or shasum is not available for use" >&2
+    echo "shasum is not available for use" >&2
     return 1
   fi
 }
@@ -306,8 +302,9 @@ get_default_policy() {
     }
   name=$(_jq '.name')
   is_active=$(_jq '.active')
-  if [[ "$name" == *"Default"* ]]  && [[ "$is_active" = "true" ]]; then
-  POLICY_ID=$(_jq '.id')
+  id=$(_jq '.id')
+  if [[ "$name" == *"Default"* ]]  && [[ "$is_active" = "true" ]] && [[ "$id" != "elastic-agent-on-cloud" ]]; then
+  POLICY_ID=$id
   fi
 done
 }
