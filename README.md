@@ -37,5 +37,5 @@ The Elastic Agent VM extension can be managed using the Azure CLI, PowerShell, R
 
 Example installation from CLI:
 ```
- az vm extension set -n ElasticAgent.windows --publisher Elastic --version 1.0.0.0 --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'
+ az vm extension set -n ElasticAgent.windows --publisher Elastic --version 1.0.0.0 --location centralus --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'
 ```
