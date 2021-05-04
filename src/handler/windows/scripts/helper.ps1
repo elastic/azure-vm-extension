@@ -285,19 +285,38 @@ function DownloadFile {
         [hashtable]$Params,
         [int]$Retries = 3
     )
-    $url = $Params['Uri']
+    $package = $Params['Package']
     $outFile = $Params['OutFile']
     [int]$trials = 0
     $webClient = New-Object net.webclient
+    $algorithm="512"
+    $shasum="$package.sha$algorithm"
+    $shasumUrl="https://artifacts.elastic.co/downloads/beats/elastic-agent/${shasum}"
+    $releasedUrl= "https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}"
+    $stagingUrl="https://artifacts-api.elastic.co/v1/downloads/beats/${package}"
     do {
         try {
             $trials +=1
-            $webClient.DownloadFile($url, $outFile)
+            $webClient.DownloadFile($releasedUrl, $outFile)
             Write-Log "Elastic Agent downloaded" "INFO"
             break
         } catch [System.Net.WebException] {
-            Write-Log "Problem downloading $url `tTrial $trials `n` tException:  $_.Exception.Message" "ERROR"
-            throw "Problem downloading $url `tTrial $trials `n` tException:  $_.Exception.Message"
+            $statusCode= $_.Exception.Response.StatusCode.Value__
+            if ( $statusCode = "404") {
+                try {
+                    $webClient.DownloadFile($stagingUrl, $outFile)
+                    Write-Log "Elastic Agent downloaded" "INFO"
+                    break
+                } catch {
+                    Write-Log "Problem downloading $stagingUrl `tTrial $trials `n` tException:  $_.Exception.Message" "ERROR"
+                    throw "Problem downloading $stagingUrl `tTrial $trials `n` tException:  $_.Exception.Message"
+                }
+            }
+            else
+            {
+                Write-Log "Problem downloading $releasedUrl `tTrial $trials `n` tException:  $_.Exception.Message" "ERROR"
+                throw "Problem downloading $releasedUrl `tTrial $trials `n` tException:  $_.Exception.Message"
+            }
         }
     }
     while ($trials -lt $Retries)
@@ -391,7 +410,7 @@ function Get-Agent-Id($fileLocation){
 
 function Get-Default-Policy($content){
     foreach ($policy in $content) {
-        if ($policy.name  -like  "*Default*" -And $policy.active -eq "true") {
+        if ($policy.name  -like  "*Default*" -And $policy.active -eq "true" -And $policy.id -ne "elastic-agent-on-cloud") {
         return $policy.id
           }
     }
