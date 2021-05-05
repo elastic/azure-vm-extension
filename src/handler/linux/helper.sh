@@ -302,9 +302,9 @@ get_default_policy() {
     }
   name=$(_jq '.name')
   is_active=$(_jq '.active')
-  id=$(_jq '.id')
-  if [[ "$name" == *"Default"* ]]  && [[ "$is_active" = "true" ]] && [[ "$id" != "elastic-agent-on-cloud" ]]; then
-  POLICY_ID=$id
+  policy_id=$(_jq '.policy_id')
+  if [[ "$name" == *"Default"* ]]  && [[ "$is_active" = "true" ]] && [[ "$policy_id" != "elastic-agent-on-cloud" ]]; then
+  POLICY_ID=$(_jq '.id')
   fi
 done
 }

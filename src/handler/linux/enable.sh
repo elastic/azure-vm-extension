@@ -59,7 +59,7 @@ Install_ElasticAgent_DEB_RPM()
         log "ERROR" "[Install_ElasticAgent_DEB_RPM] error validating checksum for Elastic Agent $STACK_VERSION"
         return $EXIT_CODE
       fi
-    elif [[ $(wget -S --spider "${staging_url}${package}"  2>&1 | grep 'HTTP/1.1 200 OK') ]] ; then
+    else
       log "[Install_ElasticAgent_DEB_RPM] download location - $staging_url" "INFO"
       wget --retry-connrefused --waitretry=1 "${staging_url}${package}" -O $package
       EXIT_CODE=$?
@@ -67,22 +67,7 @@ Install_ElasticAgent_DEB_RPM()
         log "ERROR" "[Install_ElasticAgent_DEB_RPM] error downloading Elastic Agent $STACK_VERSION"
         return $EXIT_CODE
       fi
-      log "INFO" "[Install_ElasticAgent_DEB_RPM] downloaded Elastic Agent $STACK_VERSION"
-      wget --retry-connrefused --waitretry=1 "${staging_url}${package}.${algorithm}" -O "$shasum"
-      local EXIT_CODE=$?
-      if [[ $EXIT_CODE -ne 0 ]]; then
-        log "ERROR" "[Install_ElasticAgent_DEB_RPM] error downloading Elastic Agent $STACK_VERSION $algorithm checksum"
-        return $EXIT_CODE
-      fi
-      checkShasum $package $shasum
-      EXIT_CODE=$?
-      if [[ $EXIT_CODE -ne 0 ]]; then
-        log "ERROR" "[Install_ElasticAgent_DEB_RPM] error validating checksum for Elastic Agent $STACK_VERSION"
-        return $EXIT_CODE
-      fi
-    else
-     log "ERROR" "[Install_ElasticAgent_DEB_RPM] could not find any artifacts"
-     return 1
+      #no shasum version of the package
     fi
     write_status "$name" "$first_operation" "transitioning" "$message" "$sub_name" "success" "Elastic Agent package has been downloaded"
     if [ "$DISTRO_OS" = "DEB" ]; then
@@ -212,7 +197,7 @@ Enroll_ElasticAgent() {
       log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/settings in order to retrieve the Fleet Server URL"
       return $EXITCODE
     fi
-    fleet_server=$(echo $jsonResult | jq -r '.item.fleet_server_hosts.[0]')
+    fleet_server=$(echo $jsonResult | jq -r '.item.fleet_server_hosts[0]')
     log "INFO" "[Enroll_ElasticAgent] Found fleet server $fleet_server"
     sudo elastic-agent enroll  --url="${fleet_server}" --enrollment-token="$enrolment_token" -f
   elif [[ $HAS_FLAG_VERSION = true  ]]; then
