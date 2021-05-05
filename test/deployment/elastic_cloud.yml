@@ -1,6 +1,6 @@
 ---
-cluster_name: "ec-test-azure-{{ lookup('env','BUILD_NUMBER') | default('0', true) }}-{{ lookup('env','ELASTIC_STACK_VERSION') | default(default_stack_version, true) | replace('.', '-') | lower }}"
-stack_version: "{{ lookup('env','ELASTIC_STACK_VERSION') | default(default_stack_version, true) }}"
+cluster_name: "{{ lookup('env','CLUSTER_NAME') }}"
+stack_version: "{{ lookup('env','ELASTIC_STACK_VERSION') }}"
 create_users: false
 grab_cluster_info: false
 certificate_issuer: letsencrypt-staging
