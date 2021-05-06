@@ -7,3 +7,6 @@ src/handler/linux/test.sh
 
 # Deployment automation
 .obs
+
+.terraform*
+terraform.tfstate*
