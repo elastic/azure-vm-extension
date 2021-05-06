@@ -53,12 +53,12 @@ Install_ElasticAgent_DEB_RPM()
         log "ERROR" "[Install_ElasticAgent_DEB_RPM] error downloading Elastic Agent $STACK_VERSION $algorithm checksum"
         return $EXIT_CODE
       fi
-      checkShasum $package $shasum
-      EXIT_CODE=$?
-      if [[ $EXIT_CODE -ne 0 ]]; then
-        log "ERROR" "[Install_ElasticAgent_DEB_RPM] error validating checksum for Elastic Agent $STACK_VERSION"
-        return $EXIT_CODE
-      fi
+      #checkShasum $package $shasum
+      #EXIT_CODE=$?
+      #if [[ $EXIT_CODE -ne 0 ]]; then
+      #  log "ERROR" "[Install_ElasticAgent_DEB_RPM] error validating checksum for Elastic Agent $STACK_VERSION"
+      #  return $EXIT_CODE
+      #fi
     else
       log "[Install_ElasticAgent_DEB_RPM] download location - $staging_url" "INFO"
       wget --retry-connrefused --waitretry=1 "${staging_url}${package}" -O $package

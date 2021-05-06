@@ -41,8 +41,11 @@ function Install-ElasticAgent {
             Write-Status "$name" "$firstOperation" "transitioning" "$message" "$subName" "success" "Elastic Agent package has been downloaded"
             Write-Log "Unzip elastic agent archive" "INFO"
             if ( $powershellVersion -le 4 ) {
+                if ("$installLocation\$installationName") {
+                    Remove-Item "$installLocation\$installationName" -Recurse -Force
+                }
                 Add-Type -Assembly "System.IO.Compression.Filesystem"
-                [System.IO.Compression.ZipFile]::ExtractToDirectory($savedFile,$installLocation )
+                [System.IO.Compression.ZipFile]::ExtractToDirectory($savedFile,$installLocation)
             }else {
                 Expand-Archive -LiteralPath $savedFile -DestinationPath $installLocation -Force
             }
