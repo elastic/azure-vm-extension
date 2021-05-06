@@ -85,6 +85,14 @@ function Install-ElasticAgent {
             $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/setup"  -Method 'POST' -Headers $headers -UseBasicParsing
             if ($jsonResult.statuscode -eq '200') {
                 Write-Log "Enable Fleet is now available $jsonResult" "INFO"
+                if (!(HasFleetServer("$stackVersion"))) {
+                    $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agents/setup"  -Method 'POST' -Headers $headers -UseBasicParsing
+                    if ($jsonResult.statuscode -eq '200') {
+                        Write-Log "Enable Fleet agents if now available $jsonResult" "INFO"
+                    }else {
+                        throw "Enabling Fleet Agents failed with $jsonResult.statuscode"
+                    }
+                }
             }
             else {
                 throw "Enabling Fleet failed with $jsonResult.statuscode"
