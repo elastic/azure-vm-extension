@@ -22,7 +22,6 @@ $ VAULT_TOKEN=$(cat "${HOME}/.vault-token") \
 Those credentials details can be found in vault:
 
 ```bash
-$ vault read -field=value secret/observability-team/ci/test-clusters/$id/ec-elasticsearch | jq -r .name
-$ vault read -field=value secret/observability-team/ci/test-clusters/$id/ec-elasticsearch | jq -r .resources | grep cloud_id
-$ vault read -field=value secret/observability-team/ci/test-clusters/$id/ec-elasticsearch | jq -r .resources | grep password
+$ id=ec-test-azure
+$ vault read secret/observability-team/ci/test-clusters/$id/ec-deployment
 ```
