@@ -4,23 +4,22 @@ script_path=$(dirname $(readlink -f "$0"))
 source $script_path/helper.sh
 source $script_path/newconfig.sh
 
-service_name="elastic-agent"
+# enable script will be run at enable time, will download artifacts, install elastic agent, enroll it to Fleet. Also, handles update configuration only.
 
-# for status install
+# var for install status
 name="Install elastic agent"
 first_operation="installing elastic agent"
 second_operation="enrolling elastic agent"
 message="Install elastic agent"
 sub_name="Elastic Agent"
+service_name="elastic-agent"
 
-
-# for status enable
+# var enabling status
 name_en="Enable elastic agent"
 operation_en="starting elastic agent"
 message_en="Enable elastic agent"
 
-# Install Elastic Agent
-
+# Install_ElasticAgent_DEB_RPM function will download and install the elastic agent on Debian and RPM os's
 Install_ElasticAgent_DEB_RPM()
 {
   local algorithm="sha512"
@@ -81,6 +80,7 @@ Install_ElasticAgent_DEB_RPM()
   fi
 }
 
+# Install_ElasticAgent_OTHER will download and install the elastic agent in other os's
 Install_ElasticAgent_OTHER()
 {
     local os_suffix="-linux-x86_64"
@@ -116,7 +116,7 @@ Install_ElasticAgent_OTHER()
 
 
 
-# Enroll Elastic Agent
+# Enroll_ElasticAgent enrolls the elastic agent to Fleet
 Enroll_ElasticAgent() {
   get_kibana_host
   if [[ "$KIBANA_URL" = "" ]]; then
@@ -217,7 +217,7 @@ Enroll_ElasticAgent() {
   set_sequence_to_file
 }
 
-
+#Install_ElasticAgent checks os distro and cllas the install, enroll functions
 Install_ElasticAgent() {
   if [ "$DISTRO_OS" = "DEB" ] || [ "$DISTRO_OS" = "RPM" ]; then
     retry_backoff  Install_ElasticAgent_DEB_RPM
@@ -230,7 +230,7 @@ Install_ElasticAgent() {
   retry_backoff Start_ElasticAgent
 }
 
-# Start Elastic Agent
+# Start_ElasticAgent starts the elastic agent based on systemd availability
 Start_ElasticAgent()
 {
   if [[ $(systemctl) =~ -\.mount ]]; then
@@ -247,6 +247,7 @@ Start_ElasticAgent()
   fi
 }
 
+# Run_Agent_Other checks os is other and then installs elastic agent
 Run_Agent_Other() {
   log "INFO" "[Run_Agent_Other] prepare elastic agent for install/enable for other Linux os"
   if sudo service --status-all | grep -Fq "$service_name"; then
@@ -258,6 +259,7 @@ Run_Agent_Other() {
   fi
 }
 
+# Reconfigure_Elastic_agent_DEB_RPM will reinstall elastic agent based on new configuration options entered
 Reconfigure_Elastic_agent_DEB_RPM() {
   log "INFO" "[Reconfigure_Elastic_agent_DEB_RPM] Stopping Elastic Agent"
   if [[ $(systemctl) =~ -\.mount ]]; then
@@ -271,6 +273,7 @@ Reconfigure_Elastic_agent_DEB_RPM() {
   write_status "$name_en" "$operation_en" "success" "$message_en" "$sub_name" "success" "Elastic Agent service has started"
 }
 
+#Run_Agent_DEB_RPM will check if es agent service is installed or if is vm extension update, else will start a clean installation
 Run_Agent_DEB_RPM() {
   log "INFO" "[Start_ElasticAgent] starting Elastic Agent"
   log "INFO" "[Run_Agent_DEB_RPM] Prepare elastic agent for DEB/RPM systems"
@@ -315,7 +318,7 @@ Run_Agent_DEB_RPM() {
   fi
 }
 
-
+# Run_Agent checks distro and calls corespondent functions
 Run_Agent()
 {
   if [ "$DISTRO_OS" = "DEB" ] || [ "$DISTRO_OS" = "RPM" ]; then

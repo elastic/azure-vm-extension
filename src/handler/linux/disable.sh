@@ -3,13 +3,15 @@ set -euo pipefail
 script_path=$(dirname $(readlink -f "$0"))
 source $script_path/helper.sh
 
-# for status
+# disable script is ran at disable time, during an uninstall or update
+
+# var for vm extension status
 name="Disable elastic agent"
 operation="stopping elastic agent"
 message="Disable elastic agent"
 sub_name="Elastic Agent"
 
-# Stop Elastic Agent
+# Stop_ElasticAgent stops the Elastic Agent
 Stop_ElasticAgent()
 {
   if [[ $(systemctl) =~ -\.mount ]]; then

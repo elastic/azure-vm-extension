@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# global vars
 DISTRO_OS=""
 LOGS_FOLDER=""
 CONFIG_FILE=""
@@ -28,6 +29,7 @@ OLD_THUMBPRINT=""
 IS_FLEET_SERVER=""
 HAS_FLAG_VERSION=""
 
+# checkOS checks distro
 checkOS()
 {
   if dpkg -S /bin/ls >/dev/null 2>&1
@@ -44,6 +46,7 @@ checkOS()
   fi
 }
 
+# get_logs_location gets log path from the HandlerEnvironment file
 get_logs_location()
 {
   SCRIPT=$(readlink -f "$0")
@@ -55,6 +58,7 @@ get_logs_location()
   fi
 }
 
+# get_status_location gets status path from the HandlerEnvironment file
 get_status_location()
 {
   SCRIPT=$(readlink -f "$0")
@@ -67,6 +71,7 @@ else
 fi
 }
 
+# log will log events in the azure logs
 log()
 {
   if [ "$LOGS_FOLDER" = "" ]; then
@@ -76,7 +81,8 @@ log()
   echo \[$(date +%H:%M:%ST%d-%m-%Y)\]  "$1" "$2" >> "$LOGS_FOLDER"/es-agent.log
 }
 
-checkShasum ()
+# checkShasum checks shasum
+checkShasum()
 {
   local archive_file_name="${1}"
   local authentic_checksum_file="${2}"
@@ -91,20 +97,7 @@ checkShasum ()
   fi
 }
 
-write_status() {
-  get_status_location
-  if [[ "$STATUS_FOLDER" != "" ]]; then
-    status_files_path="$STATUS_FOLDER/*.status"
-    latest_status_file=$(ls $status_files_path 2>/dev/null | sort -V | tail -1)
-    if [[ $latest_status_file = "" ]]; then
-      echo ""
-      fi
-    fi
-}
-
-
-# configuration
-
+#get_configuration_location retrieves configuration file path from HandlerEnvironment file
 get_configuration_location()
 {
   SCRIPT=$(readlink -f "$0")
@@ -120,7 +113,7 @@ get_configuration_location()
   fi
 }
 
-
+# get_cloud_id retrieves the cloudID from the current configuration file
 get_cloud_id()
 {
   get_configuration_location
@@ -133,6 +126,7 @@ get_cloud_id()
   fi
 }
 
+# get_protected_settings retrieves the private/protected settings from the current configuration file
 get_protected_settings()
 {
   get_configuration_location
@@ -145,6 +139,7 @@ get_protected_settings()
   fi
 }
 
+# get_thumbprint retrieves the thumbprint value from the protected settings
 get_thumbprint()
 {
   get_configuration_location
@@ -157,7 +152,7 @@ get_thumbprint()
   fi
 }
 
-
+# get_username retrieves the username from the current configuration file n.settings
 get_username()
 {
   get_configuration_location
@@ -170,6 +165,7 @@ get_username()
   fi
 }
 
+# get_kibana_host retrieves the kibana URL from the cloud ID value (encoding and parsing it)
 get_kibana_host () {
   get_cloud_id
   if [ "$CLOUD_ID" != "" ]; then
@@ -185,6 +181,7 @@ get_kibana_host () {
 
 }
 
+# get_elasticsearch_host retrieves the es URL from the cloud ID value (encoding and parsing it)
 get_elasticsearch_host () {
   get_cloud_id
   if [ "$CLOUD_ID" != "" ]; then
@@ -199,6 +196,7 @@ get_elasticsearch_host () {
   fi
 }
 
+# get_cloud_stack_version retrieves the stack version by pinging the es cluster and parsing the result
 get_cloud_stack_version () {
   log "INFO" "[get_cloud_stack_version] Get ES cluster URL"
   get_elasticsearch_host
@@ -233,6 +231,7 @@ get_cloud_stack_version () {
   log "INFO" "[get_cloud_stack_version] Stack version found is $STACK_VERSION"
 }
 
+# parse_yaml used for reading the agent id from the fleet.yml file
 function parse_yaml {
    local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
    sed -ne "s|^\($s\):|\1|" \
@@ -249,6 +248,7 @@ function parse_yaml {
    }'
 }
 
+# has_fleet_server will check if the new version uses the Fleet Server or Kibana Fleet, starting from 7.13 is Fleet Server
 function has_fleet_server {
   eval es_version="$1"
   IS_FLEET_SERVER=false
@@ -262,6 +262,7 @@ function has_fleet_server {
   fi
 }
 
+# has_flag_version checks if stack version is 7.12, changes on the enroll cmd have been done for this version
 function has_flag_version {
   eval es_version="$1"
   HAS_FLAG_VERSION=false
@@ -272,6 +273,7 @@ function has_flag_version {
   fi
 }
 
+# retry_backoff will run the function 3 times until giving up and exiting with code 1
 function retry_backoff() {
   local attempts=3
   local sleep_millis=20000
@@ -293,6 +295,7 @@ function retry_backoff() {
   done
 }
 
+# get_default_policy will retrieve the default policy from a list of policies
 get_default_policy() {
    eval result="$1"
    list=$(echo "$result" | jq -r '.list')
@@ -309,6 +312,7 @@ get_default_policy() {
 done
 }
 
+# get_any_active_policy will retrieve the first active policy
 get_any_active_policy() {
    eval result="$1"
    list=$(echo "$result" | jq -r '.list')
@@ -323,6 +327,7 @@ get_any_active_policy() {
 done
 }
 
+# write_status will write an event in the status file, required for azure vm extension
 write_status() {
   local name="${1}"
   local operation="${2}"
@@ -353,8 +358,7 @@ write_status() {
   fi
 }
 
-# encryption
-
+# encrypt will encrypt text
 encrypt() {
   cert_path=".../waagent/$1.crt"
   private_key_path=".../waagent/$1.prv"
@@ -366,6 +370,7 @@ encrypt() {
   fi
 }
 
+# get_password will retrieve the password from the protected settings and decrypt the value
 get_password() {
   get_protected_settings
   get_thumbprint
@@ -380,6 +385,7 @@ get_password() {
   fi
 }
 
+# get_base64Auth will retrieve the base64auth from the protected settings and decrypt the value
 get_base64Auth() {
   get_protected_settings
   get_thumbprint
@@ -394,8 +400,7 @@ get_base64Auth() {
   fi
 }
 
-# update config
-
+#is_new_config will check if is an extension update/ clean installation/configuration update
 is_new_config(){
   log "INFO" "[is_new_config] Check if new config"
   currentSequence=""
@@ -434,6 +439,8 @@ is_new_config(){
       IS_NEW_CONFIG=true
   fi
 }
+
+# set_update_var will set a flag that the operation is a vm extension update
 set_update_var() {
   log "INFO" "[set_update_var] Verified update"
   if [ "$LOGS_FOLDER" = "" ]; then
@@ -442,6 +449,7 @@ set_update_var() {
   echo "1" > "$LOGS_FOLDER/update.txt"
 }
 
+# set_sequence_to_file will set sequence flag for current configuration sequence file n.settings
 function set_sequence_to_file
 {
   log "INFO" "[set_sequence_to_file] Setting new sequence"
@@ -462,6 +470,7 @@ function set_sequence_to_file
   fi
 }
 
+# get_prev_configuration_location retrieves previous configuration file
 get_prev_configuration_location()
 {
   SCRIPT=$(readlink -f "$0")
@@ -479,6 +488,7 @@ get_prev_configuration_location()
   fi
 }
 
+# get_prev_username retrieves previous username configuration option
 get_prev_username()
 {
   get_prev_configuration_location
@@ -491,6 +501,7 @@ get_prev_username()
   fi
 }
 
+# get_prev_cloud_id retrieves previous cloudID configuration option
 get_prev_cloud_id()
 {
   get_prev_configuration_location
@@ -503,6 +514,7 @@ get_prev_cloud_id()
   fi
 }
 
+# get_prev_kibana_host retrieves previous kibana URL configuration option
 get_prev_kibana_host () {
   get_prev_cloud_id
   if [ "$OLD_CLOUD_ID" != "" ]; then
@@ -518,6 +530,7 @@ get_prev_kibana_host () {
 
 }
 
+# get_prev_elasticsearch_host retrieves previous es URL configuration option
 get_prev_elasticsearch_host () {
   get_prev_cloud_id
   if [ "$OLD_CLOUD_ID" != "" ]; then
@@ -532,6 +545,7 @@ get_prev_elasticsearch_host () {
   fi
 }
 
+# get_prev_protected_settings retrieves previous protected settings configuration option
 get_prev_protected_settings()
 {
   get_prev_configuration_location
@@ -544,6 +558,7 @@ get_prev_protected_settings()
   fi
 }
 
+# get_prev_thumbprint retrieves previous thumbprint configuration option
 get_prev_thumbprint()
 {
   get_prev_configuration_location
@@ -556,6 +571,7 @@ get_prev_thumbprint()
   fi
 }
 
+# get_prev_password retrieves previous password configuration option
 get_prev_password() {
   get_prev_protected_settings
   get_prev_thumbprint
@@ -571,6 +587,7 @@ get_prev_password() {
   fi
 }
 
+# get_prev_base64Auth retrieves previous base64auth configuration option
 get_prev_base64Auth() {
   get_prev_protected_settings
   get_prev_thumbprint
@@ -585,6 +602,7 @@ get_prev_base64Auth() {
   fi
 }
 
+# get_prev_cloud_stack_version retrieves previous stack version
 get_prev_cloud_stack_version () {
   log "INFO" "[get_prev_cloud_stack_version] Get ES cluster URL"
   get_prev_elasticsearch_host

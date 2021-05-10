@@ -3,6 +3,8 @@ $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDirectory helper.ps1)
 
+# neconfig script used during enable time, will help will uninstalling the elastic agent previously configured, it will try to retrieve the previous configuration and uninstall/remove folders for the elastic agent
+
 # for status
 $name = "Uninstall elastic agent"
 $firstOperation = "unenrolling elastic agent"

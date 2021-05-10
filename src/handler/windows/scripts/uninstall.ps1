@@ -3,7 +3,9 @@ $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDirectory helper.ps1)
 
-# for status
+# uninstall script is ran at uninstall time, either triggered by user or during vm extension update
+
+# var for vm extension status
 $name = "Uninstall elastic agent"
 $firstOperation = "unenrolling elastic agent"
 $secondOperation = "uninstalling elastic agent and removing any elastic agent related folders"
@@ -12,6 +14,7 @@ $subName = "Elastic Agent"
 
 $serviceName = 'elastic agent'
 
+# Uninstall-ElasticAgent function retrieves the agent id, unenrolls the elastic agent, uninstalls it and removes any additional files
 function Uninstall-ElasticAgent {
     $INSTALL_LOCATION="C:\Program Files"
     $retries = 3

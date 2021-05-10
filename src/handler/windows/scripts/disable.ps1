@@ -3,12 +3,15 @@ $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDirectory helper.ps1)
 
-# for status
+# disable script is ran at disable time, during an uninstall or update
+
+# var for vm extension status
 $name = "Disable elastic agent"
 $operation = "stopping elastic agent"
 $message= "Disable elastic agent"
 $subName = "Elastic Agent"
 
+# Disable-ElasticAgent used to stop the elastic agent
 function Disable-ElasticAgent {
     $retries = 3
     $retryCount = 0
