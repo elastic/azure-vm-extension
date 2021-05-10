@@ -3,7 +3,7 @@ $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDirectory helper.ps1)
 $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
-. (Join-Path $ScriptDirectory config-update.ps1)
+. (Join-Path $ScriptDirectory newconfig.ps1)
 
 # for status enable
 $nameE = "Enable elastic agent"
@@ -21,42 +21,40 @@ $subName = "Elastic Agent"
 $serviceName = 'elastic agent'
 
 function Install-ElasticAgent {
-    $INSTALL_LOCATION="C:\Program Files"
-    $OS_SUFFIX="-windows-x86_64"
-    $ALGORITHM="512"
+    $installLocation ="C:\Program Files"
     $retries = 3
     $retryCount = 0
     $completed = $false
-    $enrollment_token= ""
+    $enrollmenToken= ""
     while (-not $completed) {
         Try {
-            $powershellVersion = Get-PowershellVersion
-            $STACK_VERSION= Get-Stack-Version
-            if ( $STACK_VERSION -eq "" ) {
+            $stackVersion = Get-Stack-Version
+            if ( $stackVersion -eq "" ) {
                 throw "Elastic stack version could not be found"
             }
-            $INSTALL= "elastic-agent-${STACK_VERSION}${OS_SUFFIX}"
-            $PACKAGE="${INSTALL}.zip"
-            $SHASUM="$PACKAGE.sha$ALGORITHM"
-            $DOWNLOAD_URL="https://artifacts.elastic.co/downloads/beats/elastic-agent/${PACKAGE}"
-            $SHASUM_URL="https://artifacts.elastic.co/downloads/beats/elastic-agent/${PACKAGE}.sha512"
-            $SAVEDFILE="$env:temp\" + $PACKAGE
-            Write-Log "Starting download of elastic agent package with version $STACK_VERSION" "INFO"
-            DownloadFile -Params @{'Uri'="$DOWNLOAD_URL";'OutFile'="$SAVEDFILE"}
+            $installationName = "elastic-agent-${stackVersion}-windows-x86_64"
+            $package="${installationName}.zip"
+            $savedFile="$env:temp\" + $package
+            Write-Log "Starting download of elastic agent package with version $stackVersion" "INFO"
+            DownloadFile -Params @{'Package'="$package";'OutFile'="$savedFile"}
             # write status
             Write-Status "$name" "$firstOperation" "transitioning" "$message" "$subName" "success" "Elastic Agent package has been downloaded"
             Write-Log "Unzip elastic agent archive" "INFO"
             if ( $powershellVersion -le 4 ) {
+                if ("$installLocation\$installationName") {
+                    Remove-Item "$installLocation\$installationName" -Recurse -Force
+                }
                 Add-Type -Assembly "System.IO.Compression.Filesystem"
-                [System.IO.Compression.ZipFile]::ExtractToDirectory($SAVEDFILE,$INSTALL_LOCATION )
+                [System.IO.Compression.ZipFile]::ExtractToDirectory($savedFile,$installLocation)
             }else {
-                Expand-Archive -LiteralPath $SAVEDFILE -DestinationPath $INSTALL_LOCATION -Force
+                Expand-Archive -LiteralPath $savedFile -DestinationPath $installLocation -Force
             }
-            Write-Log "Elastic agent unzipped location $INSTALL_LOCATION" "INFO"
+            Write-Log "Elastic agent unzipped location $installLocation" "INFO"
             Write-Log "Rename folder ..."
-            Rename-Item -Path "$INSTALL_LOCATION\$INSTALL" -NewName "Elastic-Agent" -Force
-            Write-Log "Folder $INSTALL renamed to 'Agent'"
+            Rename-Item -Path "$installLocation\$installationName" -NewName "Elastic-Agent" -Force
+            Write-Log "Folder $installationName renamed to 'Agent'"
             Write-Log "Start retrieving KIBANA_URL" "INFO"
+            $powershellVersion = Get-PowershellVersion
             $kibanaUrl = Get-Kibana-URL $powershellVersion
             if (-Not $kibanaUrl) {
                 throw "Kibana url could not be found"
@@ -90,11 +88,13 @@ function Install-ElasticAgent {
             $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/setup"  -Method 'POST' -Headers $headers -UseBasicParsing
             if ($jsonResult.statuscode -eq '200') {
                 Write-Log "Enable Fleet is now available $jsonResult" "INFO"
-                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agents/setup"  -Method 'POST' -Headers $headers -UseBasicParsing
-                if ($jsonResult.statuscode -eq '200') {
-                    Write-Log "Enable Fleet agents if now available $jsonResult" "INFO"
-                }else {
-                    throw "Enabling Fleet Agents failed with $jsonResult.statuscode"
+                if (!(HasFleetServer("$stackVersion"))) {
+                    $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agents/setup"  -Method 'POST' -Headers $headers -UseBasicParsing
+                    if ($jsonResult.statuscode -eq '200') {
+                        Write-Log "Enable Fleet agents if now available $jsonResult" "INFO"
+                    }else {
+                        throw "Enabling Fleet Agents failed with $jsonResult.statuscode"
+                    }
                 }
             }
             else {
@@ -104,22 +104,37 @@ function Install-ElasticAgent {
             $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys"  -Method 'GET' -Headers $headers -UseBasicParsing
             if ($jsonResult.statuscode -eq '200') {
                 $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "list"
-                $DEFAULT_POLICY = Get-Default-Policy $keyValue
-                if (-Not $DEFAULT_POLICY) {
+                $defaultPolicy = Get-Default-Policy $keyValue
+                if (-Not $defaultPolicy) {
                     Write-Log "No active Default policy has been found, will select the first active policy instead" "WARN"
-                    $DEFAULT_POLICY = Get-AnyActive-Policy $keyValue
+                    $defaultPolicy = Get-AnyActive-Policy $keyValue
                 }
-                if (-Not $DEFAULT_POLICY) {
+                if (-Not $defaultPolicy) {
                     throw "No active policies were found. Please create a policy in Kibana Fleet"
                 }
-                Write-Log "Found enrollment_token id $DEFAULT_POLICY" "INFO"
-                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys/$($DEFAULT_POLICY)"  -Method 'GET' -Headers $headers -UseBasicParsing
+                Write-Log "Found enrollment_token id $defaultPolicy" "INFO"
+                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys/$($defaultPolicy)"  -Method 'GET' -Headers $headers -UseBasicParsing
                 if ($jsonResult.statuscode -eq '200') {
                     $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "item"
-                    $enrollment_token=$keyValue.api_key
-                    Write-Log "Found enrollment_token $enrollment_token" "INFO"
-                    Write-Log "Installing Elastic Agent and enrolling to Fleet $kibanaUrl" "INFO"
-                    & "$INSTALL_LOCATION\Elastic-Agent\elastic-agent.exe" install -f --kibana-url=$kibanaUrl --enrollment-token=$enrollment_token
+                    $enrollmenToken=$keyValue.api_key
+                    Write-Log "Found enrollment_token $enrollmenToken" "INFO"
+                    if (HasFleetServer("$stackVersion")) {
+                        Write-Log "Getting FLeet Serverl URL" "INFO"
+                        $jsonResultSettings = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/settings"  -Method 'GET' -Headers $headers -UseBasicParsing
+                        if ($jsonResultSettings.statuscode -eq '200')
+                        {
+                            $keyValue = ConvertFrom-Json $jsonResultSettings.Content | Select-Object -expand "item"
+                            $fleetServer = $keyValue.fleet_server_hosts[0]
+                        } else {
+                            throw "Retrieving Fleet Server URL has failed, please check if it has been enabled."
+                        }
+                        Write-Log "Installing Elastic Agent and enrolling to Fleet Server $fleetServer" "INFO"
+                        & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --url=$fleetServer --enrollment-token=$enrollmenToken
+                    }
+                    else {
+                        Write-Log "Installing Elastic Agent and enrolling to Fleet $kibanaUrl" "INFO"
+                        & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --kibana-url=$kibanaUrl --enrollment-token=$enrollmenToken
+                    }
                     Write-Log "Elastic Agent has been enrolled" "INFO"
                 }else {
                     throw "Retrieving the enrollment tokens has failed, api request returned status $jsonResult.statuscode"

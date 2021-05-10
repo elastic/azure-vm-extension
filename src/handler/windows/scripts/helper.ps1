@@ -107,6 +107,21 @@ function Get-Stack-Version {
   return ""
 }
 
+function HasFleetServer {
+    param([string]$esVersion)
+    $major=$esVersion.split(".")[0]
+    $minor=$esVersion.split(".")[1]
+    $intMajor = [int]$major
+    $intMinor= [int]$minor
+    if ($intMajor -gt 7)
+    {
+        return $true
+    } elseif ($intMinor -gt 12 ) {
+        return $true
+    }
+    return $false
+}
+
 function Get-PublicSettings-From-Config-Json($key, $powershellVersion) {
     Try
     {
@@ -270,19 +285,38 @@ function DownloadFile {
         [hashtable]$Params,
         [int]$Retries = 3
     )
-    $url = $Params['Uri']
+    $package = $Params['Package']
     $outFile = $Params['OutFile']
     [int]$trials = 0
     $webClient = New-Object net.webclient
+    $algorithm="512"
+    $shasum="$package.sha$algorithm"
+    $shasumUrl="https://artifacts.elastic.co/downloads/beats/elastic-agent/${shasum}"
+    $releasedUrl= "https://artifacts.elastic.co/downloads/beats/elastic-agent/${package}"
+    $stagingUrl="https://artifacts-api.elastic.co/v1/downloads/beats/${package}"
     do {
         try {
             $trials +=1
-            $webClient.DownloadFile($url, $outFile)
+            $webClient.DownloadFile($releasedUrl, $outFile)
             Write-Log "Elastic Agent downloaded" "INFO"
             break
         } catch [System.Net.WebException] {
-            Write-Log "Problem downloading $url `tTrial $trials `n` tException:  $_.Exception.Message" "ERROR"
-            throw "Problem downloading $url `tTrial $trials `n` tException:  $_.Exception.Message"
+            $statusCode= $_.Exception.Response.StatusCode.Value__
+            if ( $statusCode = "404") {
+                try {
+                    $webClient.DownloadFile($stagingUrl, $outFile)
+                    Write-Log "Elastic Agent downloaded" "INFO"
+                    break
+                } catch {
+                    Write-Log "Problem downloading $stagingUrl `tTrial $trials `n` tException:  $_.Exception.Message" "ERROR"
+                    throw "Problem downloading $stagingUrl `tTrial $trials `n` tException:  $_.Exception.Message"
+                }
+            }
+            else
+            {
+                Write-Log "Problem downloading $releasedUrl `tTrial $trials `n` tException:  $_.Exception.Message" "ERROR"
+                throw "Problem downloading $releasedUrl `tTrial $trials `n` tException:  $_.Exception.Message"
+            }
         }
     }
     while ($trials -lt $Retries)
@@ -376,7 +410,7 @@ function Get-Agent-Id($fileLocation){
 
 function Get-Default-Policy($content){
     foreach ($policy in $content) {
-        if ($policy.name  -like "Default" -And $policy.active -eq "true") {
+        if ($policy.name  -like  "*Default*" -And $policy.active -eq "true" -And $policy.policy_id -ne "elastic-agent-on-cloud") {
         return $policy.id
           }
     }
@@ -715,6 +749,61 @@ function Get-Prev-Kibana-URL($powershellVersion) {
         $cloudElems=$cloudTokens.split("$")
         $hostPort= $cloudElems[0]
         return "https://$($cloudElems[2]).$(${hostPort})"
+    }
+    return ""
+}
+
+function Get-Prev-Elasticsearch-URL($powershellVersion) {
+    $powershellVersion = Get-PowershellVersion
+    $cloudId = Get-Prev-CloudId $powershellVersion
+    if ( $cloudId -ne ""){
+        $cloudHash=$cloudId.split(":")[-1]
+        $cloudTokens=[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($cloudHash))
+        $cloudElems=$cloudTokens.split("$")
+        $hostPort= $cloudElems[0]
+        return "https://$($cloudElems[1]).$(${hostPort})"
+    }
+    return ""
+}
+
+function Get-Prev-Stack-Version {
+    $powershellVersion = Get-PowershellVersion
+    $elasticsearchUrl = Get-Prev-Elasticsearch-URL $powershellVersion
+    if (-Not $elasticsearchUrl) {
+        throw "Elasticsearch URL could not be found"
+    }
+    $password = Get-Prev-Password $powershellVersion
+    $base64Auth = Get-Prev-Base64Auth $powershellVersion
+    if (-Not $password -And -Not $base64Auth) {
+        throw "Password  or base64auto key could not be found"
+    }
+    $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+    if ( $powershellVersion -gt 3 ) {
+        $headers.Add("Accept","application/json")
+    }
+    #cred
+    $encodedCredentials = ""
+    if ($password) {
+        $username = Get-Prev-Username $powershellVersion
+        if (-Not $username) {
+            throw "Username could not be found"
+        }
+        $pair = "$($username):$($password)"
+        $encodedCredentials = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+    } else {
+        $encodedCredentials = $base64Auth
+    }
+    $headers.Add('Authorization', "Basic $encodedCredentials")
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $jsonResult = Invoke-WebRequest -Uri "$($elasticsearchUrl)"  -Method 'GET' -Headers $headers -UseBasicParsing
+    if ($jsonResult.statuscode -eq '200') {
+        $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand ""
+        $stackVersion=$keyValue.version.number
+        Write-Log "Found stack version  $stackVersion" "INFO"
+        return $stackVersion
+    }else {
+        Write-Log "Error pinging elastic cluster $elasticsearchUrl" "ERROR"
+        return ""
     }
     return ""
 }
