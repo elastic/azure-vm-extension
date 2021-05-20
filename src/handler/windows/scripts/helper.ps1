@@ -410,7 +410,7 @@ function Get-Agent-Id($fileLocation){
 
 function Get-Default-Policy($content){
     foreach ($policy in $content) {
-        if ($policy.name  -like  "*Default*" -And $policy.active -eq "true" -And $policy.policy_id -ne "elastic-agent-on-cloud") {
+        if ($policy.name  -like  "*Default*" -And $policy.active -eq "true" -And $policy.policy_id -notlike "*elastic-agent-on-cloud*") {
         return $policy.id
           }
     }

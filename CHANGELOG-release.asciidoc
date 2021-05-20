@@ -1,3 +1,8 @@
+[[release-notes-1.1.1.0]]
+=== Elastic Agent VM extension version 1.1.1.0
+
+- Default agent on cloud policy id/name has changed in Fleet, this needs to be reflected in the code since the elastic agent needs to avoid this policy
+
 [[release-notes-1.1.0.0]]
 === Elastic Agent VM extension version 1.1.0.0
 
