@@ -5,5 +5,8 @@ src/handler/windows/HandlerEnvironment.json
 build/deploy
 src/handler/linux/test.sh
 
+# Deployment automation
+.obs
+
 .terraform*
 terraform.tfstate*
