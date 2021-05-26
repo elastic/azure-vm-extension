@@ -48,6 +48,7 @@ pipeline {
       }
     }
     stage('Create cluster'){
+      options { skipDefaultCheckout() }
       steps {
         withVaultEnv(){
           echo 'ignore'
@@ -56,6 +57,7 @@ pipeline {
       }
     }
     stage('Prepare tools') {
+      options { skipDefaultCheckout() }
       steps {
         withCloudEnv() {
           sh(label: 'Prepare tools', script: 'make -C .ci prepare-tool')
@@ -63,6 +65,7 @@ pipeline {
       }
     }
     stage('Terraform') {
+      options { skipDefaultCheckout() }
       steps {
         withCloudEnv() {
           withAzEnv() {
@@ -72,6 +75,7 @@ pipeline {
       }
     }
     stage('Validate') {
+      options { skipDefaultCheckout() }
       steps {
         withCloudEnv() {
           sh(label: 'Validate', script: 'make -C .ci validate')
@@ -79,6 +83,7 @@ pipeline {
       }
     }
     stage('Destroy cluster'){
+      options { skipDefaultCheckout() }
       steps {
         echo 'ignore'
         //destroyCluster()
@@ -138,9 +143,9 @@ def withCloudEnv(Closure body) {
     error "withCloudEnv: was not possible to get the authentication info."
   }
   withEnvMask(vars: [
-    [var: 'TF_VAR_username', password: props?.data?.username],
-    [var: 'TF_VAR_password', password: props?.data?.password],
-    [var: 'TF_VAR_cloudId', password: props?.data?.cloud_id]
+    [var: 'TF_VAR_username', password: username],
+    [var: 'TF_VAR_password', password: password],
+    [var: 'TF_VAR_cloudId', password: cloud_id]
   ]){
     body()
   }
@@ -152,16 +157,16 @@ def withAzEnv(Closure body) {
     error "withAzEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
   }
   def value = props?.data
-  def cloud_id = value?.cloud_id
+  def tenant = value?.tenant
   def username = value?.username
   def password = value?.password
-  if(cloud_id == null || username == null || password == null){
+  if(tenant == null || username == null || password == null){
     error "withAzEnv: was not possible to get the authentication info."
   }
   withEnvMask(vars: [
-    [var: 'AZ_USER', password: props?.data?.username],
-    [var: 'AZ_PASS', password: props?.data?.password],
-    [var: 'AZ_TENANT', password: props?.data?.tenant]
+    [var: 'AZ_USER', password: username],
+    [var: 'AZ_PASS', password: password],
+    [var: 'AZ_TENANT', password: tenant]
   ]){
     body()
   }
