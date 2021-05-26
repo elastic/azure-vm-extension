@@ -24,5 +24,5 @@ $ TF_VAR_username=**** \
   TF_VAR_cloudId=**** \
   terraform apply
 ```
-4. If everything works as expected then the VM will be created in Azure and you can destory the plan with `terraform destroy`.
+4. If everything works as expected then the VM will be created in Azure and you can destroy the plan with `terraform destroy`.
 

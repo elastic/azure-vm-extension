@@ -53,28 +53,51 @@ pipeline {
         }
       }
     }
-    stage('Prepare terraform') {
+    stage('Prepare tools') {
       steps {
-        echo 'Run Terraform'   // TBD
+        withCloudEnv() {
+          sh(label: 'Prepare tools', script: 'make -C .ci prepare-tool')
+        }
       }
       post {
         failure {
+          destroyCluster()
+        }
+      }
+    }
+    stage('Terraform') {
+      steps {
+        withCloudEnv() {
+          sh(label: 'Run Terraform', script: 'make -C .ci run-terraform')
+        }
+      }
+      post {
+        failure {
+          destroyTerraform()
           destroyCluster()
         }
       }
     }
     stage('Validate') {
       steps {
-        echo 'Run some validations'   // TBD
+        withCloudEnv() {
+          sh(label: 'Validate', script: 'make -C .ci rvalidate')
+        }
       }
       post {
         failure {
+          withCloudEnv() {
+            destroyTerraform()
+          }
           destroyCluster()
         }
       }
     }
     stage('Destroy cluster'){
       steps {
+        withCloudEnv() {
+          destroyTerraform()
+        }
         destroyCluster()
       }
     }
@@ -92,6 +115,10 @@ def destroyCluster( ) {
   }
 }
 
+def destroyTerraform( ) {
+  sh(label: "Run Terraform", script: 'make -C .ci destroy-terraform')
+}
+
 def withVaultEnv(Closure body){
   getVaultSecret.readSecretWrapper {
     withEnvMask(vars: [
@@ -103,5 +130,22 @@ def withVaultEnv(Closure body){
     ]){
       body()
     }
+  }
+}
+
+def withCloudEnv(Closure body) {
+  def props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/ec-deployment")
+  if (props?.errors) {
+    error "withCloudEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
+  }
+  if (props?.data?.cloud_id?.trim() || props?.data?.username?.trim() || props?.data?.password?.trim()) {
+    error "withCloudEnv: Missing data in the credentials"
+  }
+  withEnvMask(vars: [
+    [var: 'TF_VAR_username', password: props?.data?.password],
+    [var: 'TF_VAR_password', password: props?.data?.username],
+    [var: 'TF_VAR_cloudId', password: props?.data?.cloud_id]
+  ]){
+    body()
   }
 }
