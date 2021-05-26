@@ -19,7 +19,7 @@ export ARM_TENANT_ID="${AZ_TENANT}"
 
 echo "Go to the terraform folder"
 cd test/terraform
-if [ "${CREATE}" == "true" ] ; then
+if [ "${TYPE}" == "run" ] ; then
 	echo "Configure the terraform environment"
 	terraform init
 
@@ -33,7 +33,7 @@ if [ "${CREATE}" == "true" ] ; then
 	terraform apply
 fi
 
-if [ "${DESTROY}" == "true" ] ; then
+if [ "${TYPE}" == "destroy" ] ; then
 	echo "Destroy"
 	TF_VAR_username="${TF_VAR_username}" \
 	TF_VAR_password="${TF_VAR_password}" \
