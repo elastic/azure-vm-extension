@@ -101,9 +101,9 @@ pipeline {
     cleanup {
       notifyBuildResult(prComment: true)
     }
-    always {
+    //always {
       //destroyCluster()
-    }
+    //}
   }
 }
 
