@@ -12,7 +12,7 @@ az login \
 
 echo "Go to the terraform folder"
 cd test/terraform
-if [ "${TYPE}" == "create" ] ; then
+if [ "${CREATE}" == "true" ] ; then
 	echo "Configure the terraform environment"
 	terraform init
 
@@ -26,7 +26,7 @@ if [ "${TYPE}" == "create" ] ; then
 	terraform apply
 fi
 
-if [ "${TYPE}" == "destroy" ] ; then
+if [ "${DESTROY}" == "true" ] ; then
 	echo "Destroy"
 	TF_VAR_username="${TF_VAR_username}" \
 	TF_VAR_password="${TF_VAR_password}" \

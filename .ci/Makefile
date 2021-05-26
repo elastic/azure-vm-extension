@@ -12,29 +12,29 @@ help: ## Display this help text
 prepare:  ## Prepare the dependencies to run the tools
 	@docker build --tag azure-vm-tools -f docker/azure-vm-tools/Dockerfile .
 
-terraform-%: prepare
+terraform-create:  ## Run the terraform plan
 ifndef TF_VAR_username
-	@echo "Please set TF_VAR_username in the environment"
+	@echo "Please set TF_VAR_username in the environment to generate the extension"
 	exit 1
 endif
 ifndef TF_VAR_password
-	@echo "Please set TF_VAR_password in the environment"
+	@echo "Please set TF_VAR_password in the environment to generate the extension"
 	exit 1
 endif
 ifndef TF_VAR_cloudId
-	@echo "Please set TF_VAR_cloudId in the environment"
+	@echo "Please set TF_VAR_cloudId in the environment to generate the extension"
 	exit 1
 endif
 ifndef AZ_USERNAME
-	@echo "Please set AZ_USERNAME in the environment"
+	@echo "Please set AZ_USERNAME in the environment to generate the extension"
 	exit 1
 endif
 ifndef AZ_PASSWORD
-	@echo "Please set AZ_PASSWORD in the environment"
+	@echo "Please set AZ_PASSWORD in the environment to generate the extension"
 	exit 1
 endif
 ifndef AZ_TENANT
-	@echo "Please set AZ_TENANT in the environment"
+	@echo "Please set AZ_TENANT in the environment to generate the extension"
 	exit 1
 endif
 	@docker run --rm -t \
@@ -46,13 +46,49 @@ endif
 		--env AZ_USERNAME=$(AZ_USERNAME) \
 		--env AZ_PASSWORD=$(AZ_PASSWORD) \
 		--env AZ_TENANT=$(AZ_TENANT) \
-		--env TYPE=$* \
+		--env CREATE=true \
 		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
 		azure-vm-tools
 
-terraform-create:  ## Create the terraform plan
-terraform-destroy: ## Destroy the terraform plan
+terraform-destroy:  ## Destroy the terraform plan
+ifndef TF_VAR_username
+	@echo "Please set TF_VAR_username in the environment to destroy"
+	exit 1
+endif
+ifndef TF_VAR_password
+	@echo "Please set TF_VAR_password in the environment to destroy"
+	exit 1
+endif
+ifndef TF_VAR_cloudId
+	@echo "Please set TF_VAR_cloudId in the environment to destroy"
+	exit 1
+endif
+ifndef AZ_USERNAME
+	@echo "Please set AZ_USERNAME in the environment to destroy"
+	exit 1
+endif
+ifndef AZ_PASSWORD
+	@echo "Please set AZ_PASSWORD in the environment to destroy"
+	exit 1
+endif
+ifndef AZ_TENANT
+	@echo "Please set AZ_TENANT in the environment to destroy"
+	exit 1
+endif
+	@docker run --rm -t \
+		--volume "$(PWD)":/app \
+		--workdir /app \
+		--env TF_VAR_username=$(TF_VAR_username) \
+		--env TF_VAR_password=$(TF_VAR_password) \
+		--env TF_VAR_cloudId=$(TF_VAR_cloudId) \
+		--env AZ_USERNAME=$(AZ_USERNAME) \
+		--env AZ_PASSWORD=$(AZ_PASSWORD) \
+		--env AZ_TENANT=$(AZ_TENANT) \
+		--env DESTROY=true \
+		--env HOME=/app \
+		-u $(CURRENT_UID):$(CURRENT_GID) \
+		azure-vm-tools
 
 validate:  ## Validate the VM extension
 	echo 'TBD'
