@@ -11,7 +11,7 @@ help: ## Display this help text
 
 .PHONY: prepare-tool
 prepare-tool:  ## Prepare the dependencies to run the tools
-	@docker build --tag tools -f docker/tools/Dockerfile .
+	@docker build --tag azure-vm-tools -f docker/azure-vm-tools/Dockerfile .
 
 run-terraform:  ## Run the terraform
 ifndef TF_VAR_username
@@ -35,7 +35,7 @@ endif
 		--env CREATE=true \
 		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
-		tools
+		azure-vm-tools
 
 destroy-terraform:  ## Destroy the terraform
 ifndef TF_VAR_username
@@ -59,7 +59,7 @@ endif
 		--env DESTROY=true \
 		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
-		tools
+		azure-vm-tools
 
 validate:  ## Validate the VM extension
 	echo 'TBD'
