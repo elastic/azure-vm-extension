@@ -27,7 +27,8 @@ pipeline {
     LC_ALL = "C.UTF-8"
     HOME = "${env.WORKSPACE}"
     PATH = "${env.HOME}/bin:${env.PATH}"
-    CLUSTER_NAME = "test-azure-${BUILD_ID}-${BRANCH_NAME}"
+    //CLUSTER_NAME = "test-azure-${BUILD_ID}-${BRANCH_NAME}"
+    CLUSTER_NAME = 'test-azure-4-PR-9'
     ELASTIC_STACK_VERSION = '7.12.1'   // This should be a matrix
   }
   options {
@@ -49,7 +50,8 @@ pipeline {
     stage('Create cluster'){
       steps {
         withVaultEnv(){
-          sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+					echo 'ignore'
+          //sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
         }
       }
     }
@@ -93,6 +95,7 @@ pipeline {
         withCloudEnv() {
           destroyTerraform()
         }
+        echo 'ignore'
         //destroyCluster()
       }
     }
@@ -101,9 +104,10 @@ pipeline {
     cleanup {
       notifyBuildResult(prComment: true)
     }
-    //always {
+    always {
+      echo 'ignore'
       //destroyCluster()
-    //}
+    }
   }
 }
 
