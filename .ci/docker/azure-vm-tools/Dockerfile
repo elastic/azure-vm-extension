@@ -12,4 +12,4 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-ENTRYPOINT [ "/app/.ci/docker/tools/entrypoint.sh" ]
+ENTRYPOINT [ "/app/.ci/docker/azure-vm-tools/entrypoint.sh" ]
