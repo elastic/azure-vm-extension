@@ -61,3 +61,17 @@ endif
 
 validate:  ## Validate the VM extension
 	echo 'TBD'
+
+create-cluster:  ## Create a cluster in the cloud
+ifndef CLUSTER_NAME
+	@echo "Please set CLUSTER_NAME in the environment to create the cluster"
+	exit 1
+endif
+	CLUSTER_NAME=$(CLUSTER_NAME) ../test/deployment/deployment.sh 'create'
+
+destroy-cluster:  ## Destroy the cluster in the cloud
+ifndef CLUSTER_NAME
+	@echo "Please set CLUSTER_NAME in the environment to destroy the cluster"
+	exit 1
+endif
+	CLUSTER_NAME=$(CLUSTER_NAME) ../test/deployment/deployment.sh 'destroy'

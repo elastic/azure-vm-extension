@@ -49,7 +49,7 @@ pipeline {
     stage('Create cluster'){
       steps {
         withVaultEnv(){
-          sh(label: "Deploy Cluster", script: "test/deployment/deployment.sh 'create'")
+          sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
         }
       }
     }
@@ -81,7 +81,7 @@ pipeline {
     stage('Validate') {
       steps {
         withCloudEnv() {
-          sh(label: 'Validate', script: 'make -C .ci rvalidate')
+          sh(label: 'Validate', script: 'make -C .ci validate')
         }
       }
       post {
@@ -111,7 +111,7 @@ pipeline {
 
 def destroyCluster( ) {
   withVaultEnv(){
-    sh(label: "Destroy Cluster", script: "test/deployment/deployment.sh 'destroy'")
+    sh(label: 'Destroy Cluster', script: 'make -C .ci destroy-cluster')
   }
 }
 
