@@ -85,8 +85,7 @@ pipeline {
     stage('Destroy cluster'){
       options { skipDefaultCheckout() }
       steps {
-        echo 'ignore'
-        //destroyCluster()
+        destroyCluster()
       }
     }
   }
@@ -95,9 +94,8 @@ pipeline {
       notifyBuildResult(prComment: true)
     }
     always {
-      echo 'ignore'
       destroyTerraform()
-      //destroyCluster()
+      destroyCluster()
     }
   }
 }
