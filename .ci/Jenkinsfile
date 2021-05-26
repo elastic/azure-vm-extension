@@ -53,12 +53,22 @@ pipeline {
           sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
         }
       }
+      post {
+        failure {
+          destroyCluster()
+        }
+      }
     }
     stage('Prepare tools') {
       options { skipDefaultCheckout() }
       steps {
         withCloudEnv() {
           sh(label: 'Prepare tools', script: 'make -C .ci prepare')
+        }
+      }
+      post {
+        failure {
+          destroyCluster()
         }
       }
     }
@@ -69,6 +79,12 @@ pipeline {
           withAzEnv() {
             sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
           }
+        }
+      }
+      post {
+        failure {
+          destroyCluster()
+          destroyTerraform()
         }
       }
     }
@@ -84,16 +100,13 @@ pipeline {
       options { skipDefaultCheckout() }
       steps {
         destroyCluster()
+        destroyTerraform()
       }
     }
   }
   post {
     cleanup {
       notifyBuildResult(prComment: true)
-    }
-    always {
-      destroyTerraform()
-      destroyCluster()
     }
   }
 }
