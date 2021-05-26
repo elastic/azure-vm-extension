@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-set -exo pipefail
+set -eo pipefail
 
+echo "What azure version?"
+az version
+
+echo "Go to the terraform folder"
+cd test/terraform
 if [ "${CREATE}" == "true" ] ; then
 	echo "Configure the terraform environment"
 	terraform init

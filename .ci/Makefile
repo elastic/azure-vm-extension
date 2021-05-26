@@ -33,6 +33,7 @@ endif
 		--env TF_VAR_password=$(TF_VAR_password) \
 		--env TF_VAR_cloudId=$(TF_VAR_cloudId) \
 		--env CREATE=true \
+		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
 		tools
 
@@ -56,6 +57,7 @@ endif
 		--env TF_VAR_password=$(TF_VAR_password) \
 		--env TF_VAR_cloudId=$(TF_VAR_cloudId) \
 		--env DESTROY=true \
+		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
 		tools
 
