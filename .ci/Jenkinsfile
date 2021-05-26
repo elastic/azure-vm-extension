@@ -95,6 +95,12 @@ pipeline {
           sh(label: 'Validate', script: 'make -C .ci validate')
         }
       }
+      post {
+        failure {
+          destroyCluster()
+          destroyTerraform()
+        }
+      }
     }
     stage('Destroy cluster'){
       options { skipDefaultCheckout() }
