@@ -4,6 +4,12 @@ set -eo pipefail
 echo "What azure version?"
 az version
 
+az login \
+	--service-principal \
+	--username "${AZ_USER}" \
+	--password "${AZ_PASS}" \
+	--tenant "${AZ_TENANT}" --only-show-errors
+
 echo "Go to the terraform folder"
 cd test/terraform
 if [ "${CREATE}" == "true" ] ; then

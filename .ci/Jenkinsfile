@@ -50,7 +50,7 @@ pipeline {
     stage('Create cluster'){
       steps {
         withVaultEnv(){
-					echo 'ignore'
+          echo 'ignore'
           //sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
         }
       }
@@ -65,13 +65,8 @@ pipeline {
     stage('Terraform') {
       steps {
         withCloudEnv() {
-          sh(label: 'Run Terraform', script: 'make -C .ci run-terraform')
-        }
-      }
-      post {
-        failure {
-          withCloudEnv() {
-            destroyTerraform()
+          withAzEnv() {
+            sh(label: 'Run Terraform', script: 'make -C .ci run-terraform')
           }
         }
       }
@@ -82,19 +77,9 @@ pipeline {
           sh(label: 'Validate', script: 'make -C .ci validate')
         }
       }
-      post {
-        failure {
-          withCloudEnv() {
-            destroyTerraform()
-          }
-        }
-      }
     }
     stage('Destroy cluster'){
       steps {
-        withCloudEnv() {
-          destroyTerraform()
-        }
         echo 'ignore'
         //destroyCluster()
       }
@@ -106,6 +91,7 @@ pipeline {
     }
     always {
       echo 'ignore'
+      destroyTerraform()
       //destroyCluster()
     }
   }
@@ -118,7 +104,11 @@ def destroyCluster( ) {
 }
 
 def destroyTerraform( ) {
-  sh(label: "Run Terraform", script: 'make -C .ci destroy-terraform')
+  withCloudEnv() {
+    withAzEnv() {
+      sh(label: "Run Terraform", script: 'make -C .ci destroy-terraform')
+    }
+  }
 }
 
 def withVaultEnv(Closure body){
@@ -148,9 +138,30 @@ def withCloudEnv(Closure body) {
     error "withCloudEnv: was not possible to get the authentication info."
   }
   withEnvMask(vars: [
-    [var: 'TF_VAR_username', password: props?.data?.password],
-    [var: 'TF_VAR_password', password: props?.data?.username],
+    [var: 'TF_VAR_username', password: props?.data?.username],
+    [var: 'TF_VAR_password', password: props?.data?.password],
     [var: 'TF_VAR_cloudId', password: props?.data?.cloud_id]
+  ]){
+    body()
+  }
+}
+
+def withAzEnv(Closure body) {
+  def props = getVaultSecret(secret: 'secret/observability-team/ci/service-account/azure-vm-extension')
+  if (props?.errors) {
+    error "withAzEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
+  }
+  def value = props?.data
+  def cloud_id = value?.cloud_id
+  def username = value?.username
+  def password = value?.password
+  if(cloud_id == null || username == null || password == null){
+    error "withAzEnv: was not possible to get the authentication info."
+  }
+  withEnvMask(vars: [
+    [var: 'AZ_USER', password: props?.data?.username],
+    [var: 'AZ_PASS', password: props?.data?.password],
+    [var: 'AZ_TENANT', password: props?.data?.tenant]
   ]){
     body()
   }

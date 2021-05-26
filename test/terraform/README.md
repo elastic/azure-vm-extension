@@ -26,3 +26,11 @@ $ TF_VAR_username=**** \
 ```
 4. If everything works as expected then the VM will be created in Azure and you can destroy the plan with `terraform destroy`.
 
+## Create principal
+
+1. Run `azure account set --subscription "****"` in your terminal to configure the azure subscription.
+1. Run `az account show -s '****' --output table` in your terminal to show the tenant for the azure subscription.
+1. Run `azure ad app create --display-name "elastic/azure-vm-extension" --identifier-uris https://github.com/elastic/azure-vm-extension` in your terminal to create an azure app.
+1. Run `azure ad sp create --id <appId>` in your terminal to create a service principal.
+1. Run `azure role assignment create --assignee "****" --role "Contributor" --scope "/subscriptions/****"`
+1. Create secret in vault `vault write secret/observability-team/ci/service-account/azure-vm-extension username="****" password="***" tenant="****" ticket=https://github.com/elastic/observability-robots/issues/471`
