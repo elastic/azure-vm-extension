@@ -164,8 +164,8 @@ def withAzEnv(Closure body) {
     error "withAzEnv: was not possible to get the authentication info."
   }
   withEnvMask(vars: [
-    [var: 'AZ_USER', password: username],
-    [var: 'AZ_PASS', password: password],
+    [var: 'AZ_USERNAME', password: username],
+    [var: 'AZ_PASSWORD', password: password],
     [var: 'AZ_TENANT', password: tenant]
   ]){
     body()
