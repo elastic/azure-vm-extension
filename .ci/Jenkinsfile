@@ -59,11 +59,6 @@ pipeline {
           sh(label: 'Prepare tools', script: 'make -C .ci prepare-tool')
         }
       }
-      post {
-        failure {
-          destroyCluster()
-        }
-      }
     }
     stage('Terraform') {
       steps {
@@ -73,8 +68,9 @@ pipeline {
       }
       post {
         failure {
-          destroyTerraform()
-          destroyCluster()
+          withCloudEnv() {
+            destroyTerraform()
+          }
         }
       }
     }
@@ -89,7 +85,6 @@ pipeline {
           withCloudEnv() {
             destroyTerraform()
           }
-          destroyCluster()
         }
       }
     }
@@ -98,13 +93,16 @@ pipeline {
         withCloudEnv() {
           destroyTerraform()
         }
-        destroyCluster()
+        //destroyCluster()
       }
     }
   }
   post {
     cleanup {
       notifyBuildResult(prComment: true)
+    }
+    always {
+      //destroyCluster()
     }
   }
 }
@@ -138,8 +136,12 @@ def withCloudEnv(Closure body) {
   if (props?.errors) {
     error "withCloudEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
   }
-  if (props?.data?.cloud_id?.trim() || props?.data?.username?.trim() || props?.data?.password?.trim()) {
-    error "withCloudEnv: Missing data in the credentials"
+  def value = props?.data
+  def cloud_id = value?.cloud_id
+  def username = value?.username
+  def password = value?.password
+  if(cloud_id == null || username == null || password == null){
+    error "withCloudEnv: was not possible to get the authentication info."
   }
   withEnvMask(vars: [
     [var: 'TF_VAR_username', password: props?.data?.password],
