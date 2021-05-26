@@ -69,7 +69,7 @@ pipeline {
       steps {
         withCloudEnv() {
           withAzEnv() {
-            sh(label: 'Run Terraform', script: 'make -C .ci run-terraform')
+            sh(label: 'Create terraform plan', script: 'make -C .ci terraform-create')
           }
         }
       }
@@ -111,7 +111,7 @@ def destroyCluster( ) {
 def destroyTerraform( ) {
   withCloudEnv() {
     withAzEnv() {
-      sh(label: "Run Terraform", script: 'make -C .ci destroy-terraform')
+      sh(label: 'Destroy terraform plan', script: 'make -C .ci terraform-destroy')
     }
   }
 }

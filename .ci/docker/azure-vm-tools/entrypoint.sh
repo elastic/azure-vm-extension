@@ -6,13 +6,13 @@ az version
 
 az login \
 	--service-principal \
-	--username "${AZ_USER}" \
-	--password "${AZ_PASS}" \
+	--username "${AZ_USERNAME}" \
+	--password "${AZ_PASSWORD}" \
 	--tenant "${AZ_TENANT}" --only-show-errors
 
 echo "Go to the terraform folder"
 cd test/terraform
-if [ "${CREATE}" == "true" ] ; then
+if [ "${TYPE}" == "create" ] ; then
 	echo "Configure the terraform environment"
 	terraform init
 
@@ -26,7 +26,7 @@ if [ "${CREATE}" == "true" ] ; then
 	terraform apply
 fi
 
-if [ "${DESTROY}" == "true" ] ; then
+if [ "${TYPE}" == "destroy" ] ; then
 	echo "Destroy"
 	TF_VAR_username="${TF_VAR_username}" \
 	TF_VAR_password="${TF_VAR_password}" \
