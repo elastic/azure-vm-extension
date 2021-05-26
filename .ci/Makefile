@@ -8,9 +8,8 @@ CURRENT_GID := $(shell id -g)
 help: ## Display this help text
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-
-.PHONY: prepare-tool
-prepare-tool:  ## Prepare the dependencies to run the tools
+.PHONY: prepare
+prepare:  ## Prepare the dependencies to run the tools
 	@docker build --tag azure-vm-tools -f docker/azure-vm-tools/Dockerfile .
 
 run-terraform:  ## Run the terraform

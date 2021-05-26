@@ -60,7 +60,7 @@ pipeline {
       options { skipDefaultCheckout() }
       steps {
         withCloudEnv() {
-          sh(label: 'Prepare tools', script: 'make -C .ci prepare-tool')
+          sh(label: 'Prepare tools', script: 'make -C .ci prepare')
         }
       }
     }
