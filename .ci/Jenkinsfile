@@ -160,13 +160,15 @@ def withAzEnv(Closure body) {
   def tenant = value?.tenant
   def username = value?.username
   def password = value?.password
-  if(tenant == null || username == null || password == null){
+  def subscription = value?.subscription
+  if(tenant == null || username == null || password == null || subscription == null){
     error "withAzEnv: was not possible to get the authentication info."
   }
   withEnvMask(vars: [
     [var: 'AZ_USERNAME', password: username],
     [var: 'AZ_PASSWORD', password: password],
-    [var: 'AZ_TENANT', password: tenant]
+    [var: 'AZ_TENANT', password: tenant],
+    [var: 'AZ_SUBSCRIPTION', password: subscription]
   ]){
     body()
   }

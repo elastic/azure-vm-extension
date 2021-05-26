@@ -33,4 +33,4 @@ $ TF_VAR_username=**** \
 1. Run `azure ad app create --display-name "elastic/azure-vm-extension" --identifier-uris https://github.com/elastic/azure-vm-extension` in your terminal to create an azure app.
 1. Run `azure ad sp create --id <appId>` in your terminal to create a service principal.
 1. Run `azure role assignment create --assignee "****" --role "Contributor" --scope "/subscriptions/****"`
-1. Create secret in vault `vault write secret/observability-team/ci/service-account/azure-vm-extension username="****" password="***" tenant="****" ticket=https://github.com/elastic/observability-robots/issues/471`
+1. Create secret in vault `vault write secret/observability-team/ci/service-account/azure-vm-extension username="****" password="***" tenant="****" ticket=https://github.com/elastic/observability-robots/issues/471 subscription="****"`

@@ -37,15 +37,20 @@ ifndef AZ_TENANT
 	@echo "Please set AZ_TENANT in the environment to generate the extension"
 	exit 1
 endif
+ifndef AZ_SUBSCRIPTION
+	@echo "Please set AZ_SUBSCRIPTION in the environment to generate the extension"
+	exit 1
+endif
 	@docker run --rm -t \
 		--volume "$(PWD)":/app \
 		--workdir /app \
-		--env TF_VAR_username=$(TF_VAR_username) \
-		--env TF_VAR_password=$(TF_VAR_password) \
-		--env TF_VAR_cloudId=$(TF_VAR_cloudId) \
-		--env AZ_USERNAME=$(AZ_USERNAME) \
-		--env AZ_PASSWORD=$(AZ_PASSWORD) \
-		--env AZ_TENANT=$(AZ_TENANT) \
+		--env TF_VAR_username="$(TF_VAR_username)" \
+		--env TF_VAR_password="$(TF_VAR_password)" \
+		--env TF_VAR_cloudId="$(TF_VAR_cloudId)" \
+		--env AZ_USERNAME="$(AZ_USERNAME)" \
+		--env AZ_PASSWORD="$(AZ_PASSWORD)" \
+		--env AZ_TENANT="$(AZ_TENANT)" \
+		--env AZ_SUBSCRIPTION="$(AZ_SUBSCRIPTION)" \
 		--env CREATE=true \
 		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
@@ -76,15 +81,20 @@ ifndef AZ_TENANT
 	@echo "Please set AZ_TENANT in the environment to destroy"
 	exit 1
 endif
+ifndef AZ_SUBSCRIPTION
+	@echo "Please set AZ_SUBSCRIPTION in the environment to destroy"
+	exit 1
+endif
 	@docker run --rm -t \
 		--volume "$(PWD)":/app \
 		--workdir /app \
-		--env TF_VAR_username=$(TF_VAR_username) \
-		--env TF_VAR_password=$(TF_VAR_password) \
-		--env TF_VAR_cloudId=$(TF_VAR_cloudId) \
-		--env AZ_USERNAME=$(AZ_USERNAME) \
-		--env AZ_PASSWORD=$(AZ_PASSWORD) \
-		--env AZ_TENANT=$(AZ_TENANT) \
+		--env TF_VAR_username="$(TF_VAR_username)" \
+		--env TF_VAR_password="$(TF_VAR_password)" \
+		--env TF_VAR_cloudId="$(TF_VAR_cloudId)" \
+		--env AZ_USERNAME="$(AZ_USERNAME)" \
+		--env AZ_PASSWORD="$(AZ_PASSWORD)" \
+		--env AZ_TENANT="$(AZ_TENANT)" \
+		--env AZ_SUBSCRIPTION="$(AZ_SUBSCRIPTION)" \
 		--env DESTROY=true \
 		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
