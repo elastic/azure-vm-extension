@@ -1,6 +1,7 @@
 ---
 cluster_name: "{{ lookup('env','CLUSTER_NAME') }}"
 stack_version: "{{ lookup('env','ELASTIC_STACK_VERSION') }}"
+create_ilm: false
 create_users: false
 grab_cluster_info: false
 certificate_issuer: letsencrypt-staging

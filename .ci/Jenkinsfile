@@ -47,35 +47,66 @@ pipeline {
       }
     }
     stage('Create cluster'){
+      options { skipDefaultCheckout() }
       steps {
         withVaultEnv(){
-          sh(label: "Deploy Cluster", script: "test/deployment/deployment.sh 'create'")
+          sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
         }
-      }
-    }
-    stage('Prepare terraform') {
-      steps {
-        echo 'Run Terraform'   // TBD
       }
       post {
         failure {
           destroyCluster()
+        }
+      }
+    }
+    stage('Prepare tools') {
+      options { skipDefaultCheckout() }
+      steps {
+        withCloudEnv() {
+          sh(label: 'Prepare tools', script: 'make -C .ci prepare')
+        }
+      }
+      post {
+        failure {
+          destroyCluster()
+        }
+      }
+    }
+    stage('Terraform') {
+      options { skipDefaultCheckout() }
+      steps {
+        withCloudEnv() {
+          withAzEnv() {
+            sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+          }
+        }
+      }
+      post {
+        failure {
+          destroyCluster()
+          destroyTerraform()
         }
       }
     }
     stage('Validate') {
+      options { skipDefaultCheckout() }
       steps {
-        echo 'Run some validations'   // TBD
+        withCloudEnv() {
+          sh(label: 'Validate', script: 'make -C .ci validate')
+        }
       }
       post {
         failure {
           destroyCluster()
+          destroyTerraform()
         }
       }
     }
     stage('Destroy cluster'){
+      options { skipDefaultCheckout() }
       steps {
         destroyCluster()
+        destroyTerraform()
       }
     }
   }
@@ -88,7 +119,15 @@ pipeline {
 
 def destroyCluster( ) {
   withVaultEnv(){
-    sh(label: "Destroy Cluster", script: "test/deployment/deployment.sh 'destroy'")
+    sh(label: 'Destroy Cluster', script: 'make -C .ci destroy-cluster')
+  }
+}
+
+def destroyTerraform( ) {
+  withCloudEnv() {
+    withAzEnv() {
+      sh(label: 'Destroy terraform plan', script: 'make -C .ci terraform-destroy')
+    }
   }
 }
 
@@ -103,5 +142,49 @@ def withVaultEnv(Closure body){
     ]){
       body()
     }
+  }
+}
+
+def withCloudEnv(Closure body) {
+  def props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/ec-deployment")
+  if (props?.errors) {
+    error "withCloudEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
+  }
+  def value = props?.data
+  def cloud_id = value?.cloud_id
+  def username = value?.username
+  def password = value?.password
+  if(cloud_id == null || username == null || password == null){
+    error "withCloudEnv: was not possible to get the authentication info."
+  }
+  withEnvMask(vars: [
+    [var: 'TF_VAR_username', password: username],
+    [var: 'TF_VAR_password', password: password],
+    [var: 'TF_VAR_cloudId', password: cloud_id]
+  ]){
+    body()
+  }
+}
+
+def withAzEnv(Closure body) {
+  def props = getVaultSecret(secret: 'secret/observability-team/ci/service-account/azure-vm-extension')
+  if (props?.errors) {
+    error "withAzEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
+  }
+  def value = props?.data
+  def tenant = value?.tenant
+  def username = value?.username
+  def password = value?.password
+  def subscription = value?.subscription
+  if(tenant == null || username == null || password == null || subscription == null){
+    error "withAzEnv: was not possible to get the authentication info."
+  }
+  withEnvMask(vars: [
+    [var: 'AZ_USERNAME', password: username],
+    [var: 'AZ_PASSWORD', password: password],
+    [var: 'AZ_TENANT', password: tenant],
+    [var: 'AZ_SUBSCRIPTION', password: subscription]
+  ]){
+    body()
   }
 }

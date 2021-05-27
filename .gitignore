@@ -10,3 +10,4 @@ src/handler/linux/test.sh
 
 .terraform*
 terraform.tfstate*
+.azure
