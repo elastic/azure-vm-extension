@@ -15,3 +15,14 @@ variable "cloudId" {
   type        = string
   sensitive   = true
 }
+
+variable "prefix" {
+  description = "The prefix for the name of the terraform resources"
+  type        = string
+  sensitive   = true
+  default     = "def"
+  validation {
+    condition     = length(var.prefix) > 10
+    error_message = "The prefix value size must shorter than 10 chars."
+  }
+}

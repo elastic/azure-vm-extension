@@ -25,6 +25,10 @@ ifndef TF_VAR_cloudId
 	@echo "Please set TF_VAR_cloudId in the environment to generate the extension"
 	exit 1
 endif
+ifndef TF_VAR_prefix
+	@echo "Please set TF_VAR_prefix in the environment to generate the extension"
+	exit 1
+endif
 ifndef AZ_USERNAME
 	@echo "Please set AZ_USERNAME in the environment to generate the extension"
 	exit 1
@@ -47,6 +51,7 @@ endif
 		--env TF_VAR_username="$(TF_VAR_username)" \
 		--env TF_VAR_password="$(TF_VAR_password)" \
 		--env TF_VAR_cloudId="$(TF_VAR_cloudId)" \
+		--env TF_VAR_prefix="$(TF_VAR_prefix)" \
 		--env AZ_USERNAME="$(AZ_USERNAME)" \
 		--env AZ_PASSWORD="$(AZ_PASSWORD)" \
 		--env AZ_TENANT="$(AZ_TENANT)" \
