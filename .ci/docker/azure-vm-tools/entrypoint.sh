@@ -31,6 +31,7 @@ if [ "${TYPE}" == "run" ] ; then
 	TF_VAR_password="${TF_VAR_password}" \
 	TF_VAR_cloudId="${TF_VAR_cloudId}" \
 	TF_VAR_prefix="${TF_VAR_prefix}" \
+	TF_VAR_vmName="${TF_VAR_vmName}" \
 	terraform apply -auto-approve
 fi
 
@@ -40,5 +41,6 @@ if [ "${TYPE}" == "destroy" ] ; then
 	TF_VAR_password="${TF_VAR_password}" \
 	TF_VAR_cloudId="${TF_VAR_cloudId}" \
 	TF_VAR_prefix="${TF_VAR_prefix}" \
+	TF_VAR_vmName="${TF_VAR_vmName}" \
 	terraform destroy -auto-approve
 fi

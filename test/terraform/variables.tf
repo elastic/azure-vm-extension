@@ -22,7 +22,29 @@ variable "prefix" {
   sensitive   = true
   default     = "def"
   validation {
-    condition     = length(var.prefix) > 10
-    error_message = "The prefix value size must shorter than 10 chars."
+    condition     = length(var.prefix) < 11
+    error_message = "prefix can be at most 10 characters."
+  }
+}
+
+variable "name" {
+  description = "The name of the terraform resources"
+  type        = string
+  sensitive   = true
+  default     = "az-vm-ext"
+  validation {
+    condition     = length(var.name) < 16
+    error_message = "name can be at most 15 characters."
+  }
+}
+
+variable "vmName" {
+  description = "The virtual machine name"
+  type        = string
+  sensitive   = true
+  default     = "az-vm-ext"
+  validation {
+    condition     = length(var.name) < 16
+    error_message = "vnName can be at most 15 characters."
   }
 }

@@ -29,6 +29,10 @@ ifndef TF_VAR_prefix
 	@echo "Please set TF_VAR_prefix in the environment to generate the extension"
 	exit 1
 endif
+ifndef TF_VAR_vmName
+	@echo "Please set TF_VAR_vmName in the environment to generate the extension"
+	exit 1
+endif
 ifndef AZ_USERNAME
 	@echo "Please set AZ_USERNAME in the environment to generate the extension"
 	exit 1
@@ -52,6 +56,7 @@ endif
 		--env TF_VAR_password="$(TF_VAR_password)" \
 		--env TF_VAR_cloudId="$(TF_VAR_cloudId)" \
 		--env TF_VAR_prefix="$(TF_VAR_prefix)" \
+		--env TF_VAR_vmName="$(TF_VAR_vmName)" \
 		--env AZ_USERNAME="$(AZ_USERNAME)" \
 		--env AZ_PASSWORD="$(AZ_PASSWORD)" \
 		--env AZ_TENANT="$(AZ_TENANT)" \
@@ -66,7 +71,9 @@ terraform-destroy:  ## Destroy the terraform plan
 terraform-run:  ## Run the terraform plan
 
 validate:  ## Validate the VM extension
-	echo 'TBD'
+	echo "ES $(ES_URL)"
+	echo "KB $(KB_URL)"
+	echo "vm $(VM_NAME)"
 
 create-cluster:  ## Create a cluster in the cloud
 ifndef CLUSTER_NAME

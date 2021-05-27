@@ -29,6 +29,8 @@ pipeline {
     PATH = "${env.HOME}/bin:${env.PATH}"
     CLUSTER_NAME = "test-azure-${BUILD_ID}-${BRANCH_NAME}"
     ELASTIC_STACK_VERSION = '7.12.1'   // This should be a matrix
+    TF_VAR_prefix = "${BRANCH_NAME}-${BUILD_ID}"
+    TF_VAR_vmName = "${BRANCH_NAME}-${BUILD_ID}-vm"
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
@@ -91,7 +93,7 @@ pipeline {
     stage('Validate') {
       options { skipDefaultCheckout() }
       steps {
-        withCloudEnv() {
+        withValidationEnv() {
           sh(label: 'Validate', script: 'make -C .ci validate')
         }
       }
@@ -145,6 +147,37 @@ def withVaultEnv(Closure body){
   }
 }
 
+def withValidationEnv(Closure body) {
+  def props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/k8s-elasticsearch")
+  if (props?.errors) {
+    error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
+  }
+  def value = props?.data?.value
+  def es_url = value?.url
+  def username = value?.username
+  def password = value?.password
+  if(es_url == null || username == null || password == null){
+    error "withValidationEnv: was not possible to get the authentication info."
+  }
+	props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/k8s-kibana")
+  if (props?.errors) {
+    error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
+  }
+  def kb_url = props?.data?.value?.url
+  if(kb_url == null){
+    error "withValidationEnv: was not possible to get the authentication info."
+  }
+  withEnvMask(vars: [
+    [var: 'ES_URL', password: es_url],
+    [var: 'ES_USERNAME', password: username],
+    [var: 'ES_PASSWORD', password: password],
+    [var: 'KB_URL', password: kb_url],
+    [var: 'VM_NAME', password: "${TF_VAR_vmName}"]
+  ]){
+    body()
+  }
+}
+
 def withCloudEnv(Closure body) {
   def props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/ec-deployment")
   if (props?.errors) {
@@ -160,8 +193,7 @@ def withCloudEnv(Closure body) {
   withEnvMask(vars: [
     [var: 'TF_VAR_username', password: username],
     [var: 'TF_VAR_password', password: password],
-    [var: 'TF_VAR_cloudId', password: cloud_id],
-    [var: 'TF_VAR_prefix', password: "${BRANCH_NAME}-${BUILD_ID}"]
+    [var: 'TF_VAR_cloudId', password: cloud_id]
   ]){
     body()
   }
