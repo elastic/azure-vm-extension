@@ -1,6 +1,6 @@
 {
   "$schema": "https://gallery.azure.com/schemas/2015-04-01/manifest.json#",
-  "name": "ElasticAgent.windows",
+  "name": "ElasticAgent-windows-arm",
   "publisher": "Elastic",
   "version": "0.0.1",
   "displayName": "ms-resource:displayName",
@@ -24,27 +24,30 @@
       "type": "Custom",
       "path": "Artifacts\\CreateUiDefinition.json",
       "isDefault": false
-    },
+    }
   ],
   "icons": {
-    "small": "Icons\\Small.png",
-    "medium": "Icons\\Medium.png",
-    "large": "Icons\\Large.png",
-    "wide": "Icons\\Wide.png"
+    "small": "Icons\\small.png",
+    "medium": "Icons\\medium.png",
+    "large": "Icons\\large.png",
+    "wide": "Icons\\wide.png"
   },
+  "screenshots": [
+    "Screenshots\\Screenshot1.png"
+  ],
   "links": [
     {
       "displayName": "ms-resource:link1",
-      "uri": "https://www.microsoft.com/"
+      "uri": "https://www.elastic.co/guide/en/fleet/current/index.html"
     }
   ],
   "categories": [
-    "classicCompute-vmextension-windows"
+    "compute-vmextension-windows"
   ],
   "filters": [
     {
       "type": "HideKey",
-      "value": "microsoft_custom-script-windows"
+      "value": "elastic_elasticagent-windows"
     }
   ]
 }

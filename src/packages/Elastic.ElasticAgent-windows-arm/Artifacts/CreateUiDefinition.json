@@ -4,7 +4,7 @@
   "parameters": {
     "elements": [
       {
-        "name": "cloudId",
+        "name": "cloudid",
         "type": "Microsoft.Common.TextBox",
         "label": "Cloud ID",
         "defaultValue": "",
@@ -23,7 +23,7 @@
         "constraints": {
           "required": true
         },
-        "osPlatform": "Linux",
+        "osPlatform": "Windows",
         "visible": true
       },
       {
@@ -48,7 +48,7 @@
     "outputs": {
       "vmName": "[vmName()]",
       "location": "[location()]",
-      "cloudId": "[elements('cloudId')]",
+      "cloudid": "[elements('cloudid')]",
       "username": "[elements('username')]",
       "password": "[elements('password')]"
     }

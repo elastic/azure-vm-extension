@@ -3,32 +3,36 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "vmName": {
-      "type": "string",
+      "type": "string"
     },
     "location": {
       "type": "string"
     },
-    "fileUris": {
-      "type": "array"
+    "cloudId": {
+      "type": "string"
     },
-    "commandToExecute": {
+    "username": {
+      "type": "string"
+    },
+    "password": {
       "type": "string"
     }
   },
   "resources": [
     {
-      "name": "[concat(parameters('vmName'),'/CustomScript')]",
+      "name": "[concat(parameters('vmName'),'/ElasticAgent')]",
       "type": "Microsoft.Compute/virtualMachines/extensions",
       "location": "[parameters('location')]",
       "apiVersion": "2015-06-15",
       "properties": {
-        "publisher": "Microsoft.Compute",
-        "type": "CustomScriptExtension",
-        "typeHandlerVersion": "1.0",
+        "publisher": "Elastic",
+        "type": "ElasticAgent.linux",
+        "typeHandlerVersion": "1.1",
         "autoUpgradeMinorVersion": true,
         "settings": {
-          "fileUris": "[parameters('fileUris')]",
-          "commandToExecute": "[parameters('commandToExecute')]"
+          "cloudId": "[parameters('cloudId')]",
+          "username": "[parameters('username')]",
+          "password": "[parameters('password')]"
         }
       }
     }
