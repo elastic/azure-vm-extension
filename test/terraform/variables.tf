@@ -44,7 +44,7 @@ variable "vmName" {
   sensitive   = true
   default     = "az-vm-ext"
   validation {
-    condition     = length(var.vnName) < 16
-    error_message = "Maximum length of vnName is 15 characters."
+    condition     = length(var.vmName) < 16
+    error_message = "Maximum length of vmName is 15 characters."
   }
 }
