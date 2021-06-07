@@ -161,7 +161,7 @@ def withValidationEnv(Closure body) {
   if(es_url == null || username == null || password == null){
     error "withValidationEnv: was not possible to get the authentication info."
   }
-	props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/k8s-kibana")
+  props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/k8s-kibana")
   if (props?.errors) {
     error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
   }
