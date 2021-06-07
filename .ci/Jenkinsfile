@@ -85,8 +85,8 @@ pipeline {
       }
       post {
         failure {
-          destroyCluster()
           destroyTerraform()
+          destroyCluster()
         }
       }
     }
@@ -99,16 +99,16 @@ pipeline {
       }
       post {
         failure {
-          destroyCluster()
           destroyTerraform()
+          destroyCluster()
         }
       }
     }
     stage('Destroy cluster'){
       options { skipDefaultCheckout() }
       steps {
-        destroyCluster()
         destroyTerraform()
+        destroyCluster()
       }
     }
   }
