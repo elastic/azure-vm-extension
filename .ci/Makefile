@@ -71,9 +71,23 @@ terraform-destroy:  ## Destroy the terraform plan
 terraform-run:  ## Run the terraform plan
 
 validate:  ## Validate the VM extension
-	echo "ES $(ES_URL)"
-	echo "KB $(KB_URL)"
-	echo "vm $(VM_NAME)"
+ifndef ES_USERNAME
+	@echo "Please set ES_USERNAME in the environment to test the extension"
+	exit 1
+endif
+ifndef ES_PASSWORD
+	@echo "Please set ES_PASSWORD in the environment to test the extension"
+	exit 1
+endif
+ifndef ES_URL
+	@echo "Please set ES_URL in the environment to test the extension"
+	exit 1
+endif
+ifndef VM_NAME
+	@echo "Please set VM_NAME in the environment to test the extension"
+	exit 1
+endif
+	test/ats/validate.sh "$(ES_USERNAME)" "$(ES_PASSWORD)" "$(ES_URL)" "$(VM_NAME)"
 
 create-cluster:  ## Create a cluster in the cloud
 ifndef CLUSTER_NAME
