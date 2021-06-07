@@ -23,7 +23,7 @@ variable "prefix" {
   default     = "def"
   validation {
     condition     = length(var.prefix) < 11
-    error_message = "prefix can be at most 10 characters."
+    error_message = "Maximum length of prefix is 10 characters."
   }
 }
 
@@ -34,7 +34,7 @@ variable "name" {
   default     = "az-vm-ext"
   validation {
     condition     = length(var.name) < 16
-    error_message = "name can be at most 15 characters."
+    error_message = "Maximum length of name is 15 characters."
   }
 }
 
@@ -44,7 +44,7 @@ variable "vmName" {
   sensitive   = true
   default     = "az-vm-ext"
   validation {
-    condition     = length(var.name) < 16
-    error_message = "vnName can be at most 15 characters."
+    condition     = length(var.vnName) < 16
+    error_message = "Maximum length of vnName is 15 characters."
   }
 }
