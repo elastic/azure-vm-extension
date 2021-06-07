@@ -90,22 +90,6 @@ pipeline {
         }
       }
     }
-    stage('Terraform') {
-      options { skipDefaultCheckout() }
-      steps {
-        withCloudEnv() {
-          withAzEnv() {
-            sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
-          }
-        }
-      }
-      post {
-        failure {
-          destroyCluster()
-          destroyTerraform()
-        }
-      }
-    }
     stage('Validate') {
       options { skipDefaultCheckout() }
       steps {
