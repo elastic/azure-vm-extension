@@ -53,7 +53,8 @@ pipeline {
       options { skipDefaultCheckout() }
       steps {
         withVaultEnv(){
-          sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+          // sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+					echo 'ignore'
         }
       }
       post {
