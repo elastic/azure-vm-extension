@@ -15,3 +15,36 @@ variable "cloudId" {
   type        = string
   sensitive   = true
 }
+
+variable "prefix" {
+  description = "The prefix for the name of the terraform resources"
+  type        = string
+  sensitive   = true
+  default     = "def"
+  validation {
+    condition     = length(var.prefix) < 11
+    error_message = "Maximum length of prefix is 10 characters."
+  }
+}
+
+variable "name" {
+  description = "The name of the terraform resources"
+  type        = string
+  sensitive   = true
+  default     = "az-vm-ext"
+  validation {
+    condition     = length(var.name) < 16
+    error_message = "Maximum length of name is 15 characters."
+  }
+}
+
+variable "vmName" {
+  description = "The virtual machine name"
+  type        = string
+  sensitive   = true
+  default     = "az-vm-ext"
+  validation {
+    condition     = length(var.vmName) < 16
+    error_message = "Maximum length of vmName is 15 characters."
+  }
+}

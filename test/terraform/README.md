@@ -22,6 +22,7 @@ This is the folder that contains the terraform definition to create a windows in
 $ TF_VAR_username=**** \
   TF_VAR_password=*** \
   TF_VAR_cloudId=**** \
+  TF_VAR_prefix=local-123 \
   terraform apply
 ```
 4. If everything works as expected then the VM will be created in Azure and you can destroy the plan with `terraform destroy`.

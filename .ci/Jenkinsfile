@@ -29,6 +29,8 @@ pipeline {
     PATH = "${env.HOME}/bin:${env.PATH}"
     CLUSTER_NAME = "test-azure-${BUILD_ID}-${BRANCH_NAME}"
     ELASTIC_STACK_VERSION = '7.12.1'   // This should be a matrix
+    TF_VAR_prefix = "${BRANCH_NAME}-${BUILD_ID}"
+    TF_VAR_vmName = "${BRANCH_NAME}-${BUILD_ID}-vm"
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
@@ -83,30 +85,30 @@ pipeline {
       }
       post {
         failure {
-          destroyCluster()
           destroyTerraform()
+          destroyCluster()
         }
       }
     }
     stage('Validate') {
       options { skipDefaultCheckout() }
       steps {
-        withCloudEnv() {
+        withValidationEnv() {
           sh(label: 'Validate', script: 'make -C .ci validate')
         }
       }
       post {
         failure {
-          destroyCluster()
           destroyTerraform()
+          destroyCluster()
         }
       }
     }
     stage('Destroy cluster'){
       options { skipDefaultCheckout() }
       steps {
-        destroyCluster()
         destroyTerraform()
+        destroyCluster()
       }
     }
   }
@@ -142,6 +144,41 @@ def withVaultEnv(Closure body){
     ]){
       body()
     }
+  }
+}
+
+def withValidationEnv(Closure body) {
+  def props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/k8s-elasticsearch")
+  if (props?.errors) {
+    error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
+  }
+
+  def esJson = props?.data.value
+  def es = toJSON(esJson)
+  def es_url = es.url
+  def username = es.username
+  def password = es.password
+  if(es_url == null || username == null || password == null){
+    error "withValidationEnv: was not possible to get the authentication info."
+  }
+  props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/k8s-kibana")
+  if (props?.errors) {
+    error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
+  }
+  def kbJson = props?.data.value
+  def kb = toJSON(kbJson)
+  def kb_url = kb.url
+  if(kb_url == null){
+    error "withValidationEnv: was not possible to get the authentication info."
+  }
+  withEnvMask(vars: [
+    [var: 'ES_URL', password: es_url],
+    [var: 'ES_USERNAME', password: username],
+    [var: 'ES_PASSWORD', password: password],
+    [var: 'KB_URL', password: kb_url],
+    [var: 'VM_NAME', password: "${TF_VAR_vmName}"]
+  ]){
+    body()
   }
 }
 
