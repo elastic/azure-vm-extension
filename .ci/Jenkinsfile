@@ -153,7 +153,7 @@ def withValidationEnv(Closure body) {
     error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
   }
 
-  def esJson = rops?.data.value
+  def esJson = props?.data.value
   def es = toJSON(esJson)
   def es_url = es.url
   def username = es.username
