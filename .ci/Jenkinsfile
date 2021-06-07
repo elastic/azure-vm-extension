@@ -167,7 +167,7 @@ def withValidationEnv(Closure body) {
   if (props?.errors) {
     error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
   }
-  def kbJson = rops?.data.value
+  def kbJson = props?.data.value
   def kb = toJSON(kbJson)
   def kb_url = kb.url
   if(kb_url == null){
