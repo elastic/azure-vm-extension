@@ -153,9 +153,9 @@ def withValidationEnv(Closure body) {
     error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
   }
   def value = props?.data?.value
-  def es_url = value?.get('url', null)
-  def username = value?.get('username', null)
-  def password = value?.get('password', null)
+  def es_url = value?.url
+  def username = value?.username
+  def password = value?.password
   if(es_url == null || username == null || password == null){
     error "withValidationEnv: was not possible to get the authentication info."
   }
@@ -163,7 +163,7 @@ def withValidationEnv(Closure body) {
   if (props?.errors) {
     error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
   }
-  def kb_url = props?.data?.value?.get('url', null)
+  def kb_url = props?.data?.value?.url
   if(kb_url == null){
     error "withValidationEnv: was not possible to get the authentication info."
   }
