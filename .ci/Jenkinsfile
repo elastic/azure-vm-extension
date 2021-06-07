@@ -29,7 +29,7 @@ pipeline {
     PATH = "${env.HOME}/bin:${env.PATH}"
     //CLUSTER_NAME = "test-azure-${BUILD_ID}-${BRANCH_NAME}"
     CLUSTER_NAME = "test-azure-${BRANCH_NAME}"
-    ELASTIC_STACK_VERSION = '7.12.1'   // This should be a matrix
+    ELASTIC_STACK_VERSION = '7.13.1'   // This should be a matrix
     TF_VAR_prefix = "${BRANCH_NAME}-${BUILD_ID}"
     TF_VAR_vmName = "${BRANCH_NAME}-${BUILD_ID}-vm"
   }
@@ -53,8 +53,7 @@ pipeline {
       options { skipDefaultCheckout() }
       steps {
         withVaultEnv(){
-          // sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
-					echo 'ignore'
+          sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
         }
       }
       post {
