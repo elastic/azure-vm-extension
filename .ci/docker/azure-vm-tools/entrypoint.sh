@@ -53,4 +53,5 @@ if [ "${TYPE}" == "output" ] ; then
 	TF_VAR_prefix="${TF_VAR_prefix}" \
 	TF_VAR_vmName="${TF_VAR_vmName}" \
 	terraform output -raw azure_machine_id > .env
+	cat .venv
 fi
