@@ -62,7 +62,7 @@ resource "azurerm_virtual_machine_extension" "main" {
   virtual_machine_id   = azurerm_windows_virtual_machine.main.id
   publisher            = "Elastic"
   type                 = "ElasticAgent.windows"
-  type_handler_version = "1.0"
+  type_handler_version = "1.1"
 
   protected_settings = <<PROTECTED_SETTINGS
     {
