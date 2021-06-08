@@ -77,7 +77,3 @@ PROTECTED_SETTINGS
     }
 SETTINGS
 }
-
-output "azure_machine_id" {
-  value = azurerm_windows_virtual_machine.main.id
-}

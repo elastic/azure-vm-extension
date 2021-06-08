@@ -5,8 +5,7 @@ set -eo pipefail
 ES_USERNAME=${1:?'Missing the Username:Password'}
 ES_PASSWORD=${2:?'Missing the Username:Password'}
 ES_URL=${3:?'Missing the Elasticsearch URL'}
-VM_ID=${4:?'Missing the ID of the Virtual Machine'}
-VM_NAME=${5:?'Missing the name of the Virtual Machine '}
+VM_NAME=${4:?'Missing the name of the Virtual Machine '}
 
 ### Validate ElasticStack version to run the tests if supported
 RE='[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
@@ -45,12 +44,12 @@ function count() {
 
 ### Run the tests
 INDEX='.fleet-agents-7'
-echo "Validate the agent enrolment ${VM_ID} in ${INDEX}"
+echo "Validate the agent enrolment ${VM_NAME} in ${INDEX}"
 curl -s -X GET -u "${ES_USERNAME}:${ES_PASSWORD}" "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
 {
   \"query\": {
     \"match\": {
-      \"local_metadata.host.hostname\": \"${VM_ID}\"
+      \"local_metadata.host.hostname\": \"${VM_NAME}\"
     }
   }
 }
