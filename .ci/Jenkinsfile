@@ -86,7 +86,7 @@ pipeline {
       post {
         failure {
           destroyTerraform()
-          destroyCluster()
+          //destroyCluster()
         }
       }
     }
@@ -100,7 +100,7 @@ pipeline {
       post {
         failure {
           destroyTerraform()
-          destroyCluster()
+          //destroyCluster()
         }
       }
     }
@@ -108,7 +108,7 @@ pipeline {
       options { skipDefaultCheckout() }
       steps {
         destroyTerraform()
-        destroyCluster()
+        //destroyCluster()
       }
     }
   }

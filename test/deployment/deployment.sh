@@ -8,6 +8,8 @@ fi
 git clone git@github.com:elastic/observability-test-environments.git .obs
 
 cd .obs
+git checkout -b kuisathaverat-fix_kibana_1 master
+git pull git@github.com:kuisathaverat/observability-test-environments.git fix_kibana_1
 
 if [ $1 == "destroy" ] ; then
     CLUSTER_CONFIG_FILE=$SCRIPT_DIR/elastic_cloud.yml \
