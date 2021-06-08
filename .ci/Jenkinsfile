@@ -173,21 +173,10 @@ def withValidationEnv(Closure body) {
   if(es_url == null || username == null || password == null){
     error "withValidationEnv: was not possible to get the authentication info."
   }
-  props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/k8s-kibana")
-  if (props?.errors) {
-    error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
-  }
-  def kbJson = props?.data.value
-  def kb = toJSON(kbJson)
-  def kb_url = kb.url
-  if(kb_url == null){
-    error "withValidationEnv: was not possible to get the authentication info."
-  }
   withEnvMask(vars: [
     [var: 'ES_URL', password: es_url],
     [var: 'ES_USERNAME', password: username],
     [var: 'ES_PASSWORD', password: password],
-    [var: 'KB_URL', password: kb_url],
     [var: 'VM_ID', password: "${AZURE_VM_ID}"]
   ]){
     body()
