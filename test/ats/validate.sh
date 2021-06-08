@@ -6,6 +6,7 @@ ES_USERNAME=${1:?'Missing the Username:Password'}
 ES_PASSWORD=${2:?'Missing the Username:Password'}
 ES_URL=${3:?'Missing the Elasticsearch URL'}
 VM_ID=${4:?'Missing the ID of the Virtual Machine'}
+VM_NAME=${5:?'Missing the name of the Virtual Machine '}
 
 ### Validate ElasticStack version to run the tests if supported
 RE='[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
@@ -29,7 +30,7 @@ function count() {
   {
     \"query\": {
       \"match\": {
-        \"agent.hostname\": \"${VM_ID}\"
+        \"agent.hostname\": \"${VM_NAME}\"
       }
     }
   }
@@ -63,12 +64,12 @@ else
 fi
 
 for INDEX in '.ds-metrics-system.memory-default-*' '.ds-metrics-system.cpu-default-*' '.ds-metrics-system.diskio-default-*' ; do
-  echo "Validate whether the metric data streams are sending data for ${VM_ID} in ${INDEX}"
+  echo "Validate whether the metric data streams are sending data for ${VM_NAME} in ${INDEX}"
   count "${INDEX}"
 done
 
 for INDEX in '.ds-logs-system.application-default-*' ; do
-  echo "Validate whether the logs are coming in for ${VM_ID} in ${INDEX}"
+  echo "Validate whether the logs are coming in for ${VM_NAME} in ${INDEX}"
   count "${INDEX}"
 done
 

@@ -90,7 +90,11 @@ ifndef VM_ID
 	@echo "Please set VM_ID in the environment to test the extension"
 	exit 1
 endif
-	../test/ats/validate.sh "$(ES_USERNAME)" "$(ES_PASSWORD)" "$(ES_URL)" "$(VM_ID)"
+ifndef VM_NAME
+	@echo "Please set VM_NAME in the environment to test the extension"
+	exit 1
+endif
+	../test/ats/validate.sh "$(ES_USERNAME)" "$(ES_PASSWORD)" "$(ES_URL)" "$(VM_ID)" "$(VM_NAME)"
 
 create-cluster:  ## Create a cluster in the cloud
 ifndef CLUSTER_NAME

@@ -125,7 +125,8 @@ def exportAzureVMID() {
   def envFile = 'test/terraform/.env'
   if (fileExists(envFile)){
     env.AZURE_VM_ID = readFile(file: envFile)?.trim()
-    echo env.AZURE_VM_ID
+    echo env?.AZURE_VM_ID?.trim()
+    archiveArtifacts "${envFile}"
   } else {
     error "exportAzureVMID: ${envFile} does not exist."
   }
@@ -177,7 +178,8 @@ def withValidationEnv(Closure body) {
     [var: 'ES_URL', password: es_url],
     [var: 'ES_USERNAME', password: username],
     [var: 'ES_PASSWORD', password: password],
-    [var: 'VM_ID', password: "${env.AZURE_VM_ID}"]
+    [var: 'VM_ID', password: "${env.AZURE_VM_ID}"],
+    [var: 'VM_NAME', password: "${env.TF_VAR_vmName}"]
   ]){
     body()
   }
