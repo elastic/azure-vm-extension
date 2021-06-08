@@ -2,6 +2,7 @@
 SHELL=/bin/bash -o pipefail
 CURRENT_UID := $(shell id -u)
 CURRENT_GID := $(shell id -g)
+DOCKER_IMAGE=docker.elastic.co/observability-ci/azure-vm-tools
 
 .PHONY: help
 .DEFAULT_GOAL := help
@@ -10,7 +11,7 @@ help: ## Display this help text
 
 .PHONY: prepare
 prepare:  ## Prepare the dependencies to run the tools
-	@docker build --tag azure-vm-tools -f docker/azure-vm-tools/Dockerfile .
+	@docker build --tag $(DOCKER_IMAGE) -f docker/azure-vm-tools/Dockerfile .
 
 terraform-%:  ## Run the terraform action
 ifndef TF_VAR_username
@@ -64,7 +65,7 @@ endif
 		--env TYPE=$* \
 		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
-		azure-vm-tools
+		$(DOCKER_IMAGE)
 
 terraform-destroy:  ## Destroy the terraform plan
 
