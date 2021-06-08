@@ -5,7 +5,7 @@ set -eo pipefail
 ES_USERNAME=${1:?'Missing the Username:Password'}
 ES_PASSWORD=${2:?'Missing the Username:Password'}
 ES_URL=${3:?'Missing the Elasticsearch URL'}
-VM_NAME=${4:?'Missing the VM name'}
+VM_ID=${4:?'Missing the ID of the Virtual Machine'}
 
 ### Validate ElasticStack version to run the tests if supported
 RE='[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
@@ -29,7 +29,7 @@ function count() {
   {
     \"query\": {
       \"match\": {
-        \"agent.hostname\": \"${VM_NAME}\"
+        \"agent.hostname\": \"${VM_ID}\"
       }
     }
   }
@@ -44,12 +44,12 @@ function count() {
 
 ### Run the tests
 INDEX='.fleet-agents-7'
-echo "Validate the agent enrolment ${VM_NAME} in ${INDEX}"
+echo "Validate the agent enrolment ${VM_ID} in ${INDEX}"
 curl -s -X GET -u "${ES_USERNAME}:${ES_PASSWORD}" "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
 {
   \"query\": {
     \"match\": {
-      \"local_metadata.host.hostname\": \"${VM_NAME}\"
+      \"local_metadata.host.hostname\": \"${VM_ID}\"
     }
   }
 }
@@ -63,12 +63,12 @@ else
 fi
 
 for INDEX in '.ds-metrics-system.memory-default-*' '.ds-metrics-system.cpu-default-*' '.ds-metrics-system.diskio-default-*' ; do
-  echo "Validate whether the metric data streams are sending data for ${VM_NAME} in ${INDEX}"
+  echo "Validate whether the metric data streams are sending data for ${VM_ID} in ${INDEX}"
   count "${INDEX}"
 done
 
 for INDEX in '.ds-logs-system.application-default-*' ; do
-  echo "Validate whether the logs are coming in for ${VM_NAME} in ${INDEX}"
+  echo "Validate whether the logs are coming in for ${VM_ID} in ${INDEX}"
   count "${INDEX}"
 done
 

@@ -80,6 +80,8 @@ pipeline {
         withCloudEnv() {
           withAzEnv() {
             sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+            sh(label: 'Run terraform output', script: 'make -C .ci terraform-output')
+            exportAzureVMID()
           }
         }
       }
@@ -116,6 +118,16 @@ pipeline {
     cleanup {
       notifyBuildResult(prComment: true)
     }
+  }
+}
+
+def exportAzureVMID() {
+  def envFile = 'test/terraform/.env'
+  if (fileExists(envFile)){
+    env.AZURE_VM_ID = readFile(file: envFile)?.trim()
+    echo env.AZURE_VM_ID
+  } else {
+    error "exportAzureVMID: ${envFile} does not exist."
   }
 }
 
@@ -176,7 +188,7 @@ def withValidationEnv(Closure body) {
     [var: 'ES_USERNAME', password: username],
     [var: 'ES_PASSWORD', password: password],
     [var: 'KB_URL', password: kb_url],
-    [var: 'VM_NAME', password: "${TF_VAR_vmName}"]
+    [var: 'VM_ID', password: "${AZURE_VM_ID}"]
   ]){
     body()
   }
