@@ -52,12 +52,12 @@ if [ "${TYPE}" == "output" ] ; then
 	TF_VAR_cloudId="${TF_VAR_cloudId}" \
 	TF_VAR_prefix="${TF_VAR_prefix}" \
 	TF_VAR_vmName="${TF_VAR_vmName}" \
-	terraform output -raw azure_machine_id > .env
-	cat .venv
+	terraform output
 	TF_VAR_username="${TF_VAR_username}" \
 	TF_VAR_password="${TF_VAR_password}" \
 	TF_VAR_cloudId="${TF_VAR_cloudId}" \
 	TF_VAR_prefix="${TF_VAR_prefix}" \
 	TF_VAR_vmName="${TF_VAR_vmName}" \
-	terraform output
+	terraform output -raw azure_machine_id > .env
+	cat .env || true
 fi
