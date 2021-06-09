@@ -45,7 +45,10 @@ pipeline {
         axes {
           axis {
             name 'ELASTIC_STACK_VERSION'
-            values '8.0.0-SNAPSHOT', '7.13-SNAPSHOT', '7.13.1'
+            // The below line is part of the bump release automation
+            // if you change anything please modifies the file
+            // .ci/bump-stack-release-version.sh
+            values '8.0.0-SNAPSHOT', '7.13.1-SNAPSHOT', '7.13.1'
           }
         }
         stages {
@@ -236,8 +239,8 @@ def withAzEnv(Closure body) {
 }
 
 def withMatrixEnv(Closure body) {
-	def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','')
-	def uniqueId = "${stackVersion}-${BUILD_ID}-${BRANCH_NAME}"
+  def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','')
+  def uniqueId = "${stackVersion}-${BUILD_ID}-${BRANCH_NAME}"
   withEnv([
     "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}",
     "TF_VAR_prefix=${uniqueId.substring(10)}",
