@@ -121,19 +121,17 @@ pipeline {
 }
 
 def destroyCluster( ) {
-  echo 'skipped'
-  /*withVaultEnv(){
+  withVaultEnv(){
     sh(label: 'Destroy Cluster', script: 'make -C .ci destroy-cluster')
-  }*/
+  }
 }
 
 def destroyTerraform( ) {
-  echo 'skipped'
-  /*withCloudEnv() {
+  withCloudEnv() {
     withAzEnv() {
       sh(label: 'Destroy terraform plan', script: 'make -C .ci terraform-destroy')
     }
-  }*/
+  }
 }
 
 def withVaultEnv(Closure body){
