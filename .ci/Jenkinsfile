@@ -18,7 +18,7 @@
 @Library('apm@current') _
 
 pipeline {
-  agent { label 'ubuntu-20' }
+  agent none
   environment {
     REPO = "azure-vm-extension"
     NOTIFY_TO = credentials('notify-to')
@@ -27,10 +27,6 @@ pipeline {
     LC_ALL = "C.UTF-8"
     HOME = "${env.WORKSPACE}"
     PATH = "${env.HOME}/bin:${env.PATH}"
-    CLUSTER_NAME = "test-azure-${BUILD_ID}-${BRANCH_NAME}"
-    ELASTIC_STACK_VERSION = '7.13.1'   // This should be a matrix
-    TF_VAR_prefix = "${BRANCH_NAME}-${BUILD_ID}"
-    TF_VAR_vmName = "${BRANCH_NAME}-${BUILD_ID}-vm"
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
@@ -42,74 +38,88 @@ pipeline {
     disableConcurrentBuilds()
   }
   stages {
-    stage('Checkout'){
-      steps {
-        deleteDir()
-        checkout scm
-      }
-    }
-    stage('Create cluster'){
+    stage('ITs') {
       options { skipDefaultCheckout() }
-      steps {
-        withVaultEnv(){
-          sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
-        }
-      }
-      post {
-        failure {
-          destroyCluster()
-        }
-      }
-    }
-    stage('Prepare tools') {
-      options { skipDefaultCheckout() }
-      steps {
-        withCloudEnv() {
-          sh(label: 'Prepare tools', script: 'make -C .ci prepare')
-        }
-      }
-      post {
-        failure {
-          destroyCluster()
-        }
-      }
-    }
-    stage('Terraform') {
-      options { skipDefaultCheckout() }
-      steps {
-        withCloudEnv() {
-          withAzEnv() {
-            sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+      matrix {
+        agent { label 'ubuntu-20' }
+        axes {
+          axis {
+            name 'ELASTIC_STACK_VERSION'
+            values '8.0.0-SNAPSHOT', '7.13-SNAPSHOT', '7.13.1'
           }
         }
-      }
-      post {
-        failure {
-          destroyTerraform()
-          destroyCluster()
+        stages {
+          stage('Checkout'){
+            steps {
+              deleteDir()
+              checkout scm
+            }
+          }
+          stage('Create cluster'){
+            options { skipDefaultCheckout() }
+            steps {
+              withVaultEnv(){
+                sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+              }
+            }
+            post {
+              failure {
+                destroyCluster()
+              }
+            }
+          }
+          stage('Prepare tools') {
+            options { skipDefaultCheckout() }
+            steps {
+              withCloudEnv() {
+                sh(label: 'Prepare tools', script: 'make -C .ci prepare')
+              }
+            }
+            post {
+              failure {
+                destroyCluster()
+              }
+            }
+          }
+          stage('Terraform') {
+            options { skipDefaultCheckout() }
+            steps {
+              withCloudEnv() {
+                withAzEnv() {
+                  sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+                }
+              }
+            }
+            post {
+              failure {
+                destroyTerraform()
+                destroyCluster()
+              }
+            }
+          }
+          stage('Validate') {
+            options { skipDefaultCheckout() }
+            steps {
+              sleep 200
+              withValidationEnv() {
+                sh(label: 'Validate', script: 'make -C .ci validate')
+              }
+            }
+            post {
+              failure {
+                destroyTerraform()
+                destroyCluster()
+              }
+            }
+          }
+          stage('Destroy cluster'){
+            options { skipDefaultCheckout() }
+            steps {
+              destroyTerraform()
+              destroyCluster()
+            }
+          }
         }
-      }
-    }
-    stage('Validate') {
-      options { skipDefaultCheckout() }
-      steps {
-        sleep 200
-        withValidationEnv() {
-          sh(label: 'Validate', script: 'make -C .ci validate')
-        }
-      }
-      post {
-        failure {
-          destroyTerraform()
-          destroyCluster()
-        }
-      }
-    }
-    stage('Destroy cluster'){
-      options { skipDefaultCheckout() }
-      steps {
-        destroyTerraform()
-        destroyCluster()
       }
     }
   }
@@ -162,13 +172,15 @@ def withValidationEnv(Closure body) {
   if(es_url == null || username == null || password == null){
     error "withValidationEnv: was not possible to get the authentication info."
   }
-  withEnvMask(vars: [
-    [var: 'ES_URL', password: es_url],
-    [var: 'ES_USERNAME', password: username],
-    [var: 'ES_PASSWORD', password: password],
-    [var: 'VM_NAME', password: "${env.TF_VAR_vmName}"]
-  ]){
-    body()
+  withMatrixEnv() {
+    withEnvMask(vars: [
+      [var: 'ES_URL', password: es_url],
+      [var: 'ES_USERNAME', password: username],
+      [var: 'ES_PASSWORD', password: password],
+      [var: 'VM_NAME', password: "${env.TF_VAR_vmName}"]
+    ]){
+      body()
+    }
   }
 }
 
@@ -184,12 +196,16 @@ def withCloudEnv(Closure body) {
   if(cloud_id == null || username == null || password == null){
     error "withCloudEnv: was not possible to get the authentication info."
   }
-  withEnvMask(vars: [
-    [var: 'TF_VAR_username', password: username],
-    [var: 'TF_VAR_password', password: password],
-    [var: 'TF_VAR_cloudId', password: cloud_id]
-  ]){
-    body()
+
+  withMatrixEnv() {
+    withEnvMask(vars: [
+      [var: 'TF_VAR_username', password: username],
+      [var: 'TF_VAR_password', password: password],
+      [var: 'TF_VAR_cloudId', password: cloud_id],
+      [var: 'TF_VAR_password', password: password]
+    ]){
+      body()
+    }
   }
 }
 
@@ -206,12 +222,26 @@ def withAzEnv(Closure body) {
   if(tenant == null || username == null || password == null || subscription == null){
     error "withAzEnv: was not possible to get the authentication info."
   }
-  withEnvMask(vars: [
-    [var: 'AZ_USERNAME', password: username],
-    [var: 'AZ_PASSWORD', password: password],
-    [var: 'AZ_TENANT', password: tenant],
-    [var: 'AZ_SUBSCRIPTION', password: subscription]
-  ]){
+
+  withMatrixEnv() {
+    withEnvMask(vars: [
+      [var: 'AZ_USERNAME', password: username],
+      [var: 'AZ_PASSWORD', password: password],
+      [var: 'AZ_TENANT', password: tenant],
+      [var: 'AZ_SUBSCRIPTION', password: subscription]
+    ]){
+      body()
+    }
+  }
+}
+
+def withMatrixEnv(Closure body) {
+	def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','')
+	def uniqueId = "${stackVersion}-${BUILD_ID}-${BRANCH_NAME}"
+  withEnv([
+    "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}",
+    "TF_VAR_prefix=${uniqueId.substring(10)}",
+    "TF_VAR_vmName=${uniqueId.substring(15)}"]) {
     body()
   }
 }
