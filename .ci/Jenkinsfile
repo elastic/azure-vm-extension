@@ -86,13 +86,14 @@ pipeline {
       post {
         failure {
           destroyTerraform()
-          destroyCluster()
+          //destroyCluster()
         }
       }
     }
     stage('Validate') {
       options { skipDefaultCheckout() }
       steps {
+        sleep 100
         withValidationEnv() {
           sh(label: 'Validate', script: 'make -C .ci validate')
         }
@@ -100,7 +101,7 @@ pipeline {
       post {
         failure {
           destroyTerraform()
-          destroyCluster()
+          //destroyCluster()
         }
       }
     }
@@ -108,7 +109,7 @@ pipeline {
       options { skipDefaultCheckout() }
       steps {
         destroyTerraform()
-        destroyCluster()
+        //destroyCluster()
       }
     }
   }
