@@ -25,8 +25,6 @@ pipeline {
     PIPELINE_LOG_LEVEL = 'INFO'
     LANG = "C.UTF-8"
     LC_ALL = "C.UTF-8"
-    HOME = "${env.WORKSPACE}"
-    PATH = "${env.HOME}/bin:${env.PATH}"
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
@@ -50,6 +48,10 @@ pipeline {
             // .ci/bump-stack-release-version.sh
             values '8.0.0-SNAPSHOT', '7.13.1-SNAPSHOT', '7.13.1'
           }
+        }
+        environment {
+          HOME = "${env.WORKSPACE}"
+          PATH = "${env.HOME}/bin:${env.PATH}"
         }
         stages {
           stage('Checkout'){
