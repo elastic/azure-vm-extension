@@ -82,6 +82,9 @@ function verify() {
 ### Default status
 STATUS=0
 
+### Print indices
+curl -s -X GET -u "${ES_USERNAME}:${ES_PASSWORD}" "${ES_URL}"/_cat/indices
+
 INDEX='.fleet-agents-7'
 echo "Validate the agent enrolment ${VM_NAME} in ${INDEX}"
 search "${INDEX}"
