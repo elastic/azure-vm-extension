@@ -112,17 +112,10 @@ pipeline {
               }
             }
             post {
-              failure {
+              always {
                 destroyTerraform()
                 destroyCluster()
               }
-            }
-          }
-          stage('Destroy cluster'){
-            options { skipDefaultCheckout() }
-            steps {
-              destroyTerraform()
-              destroyCluster()
             }
           }
         }
