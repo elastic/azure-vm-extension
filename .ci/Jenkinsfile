@@ -243,7 +243,7 @@ def withAzEnv(Closure body) {
 def withMatrixEnv(Closure body) {
   // -S need to avoid clashes between same version for releases and snapshots.
   // 7.13.0-SNAPSHOT and 7.13.0 might clash so let's keep the -S for this.
-  def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','-S')
+  def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','-S').replaceAll('\\.', '-')
   def uniqueId = "${stackVersion}-${BUILD_ID}-${BRANCH_NAME}"
   echo "${stackVersion} - ${uniqueId}"
   withEnv([
