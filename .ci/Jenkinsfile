@@ -86,7 +86,7 @@ pipeline {
       post {
         failure {
           destroyTerraform()
-          //destroyCluster()
+          destroyCluster()
         }
       }
     }
@@ -101,7 +101,7 @@ pipeline {
       post {
         failure {
           destroyTerraform()
-          //destroyCluster()
+          destroyCluster()
         }
       }
     }
@@ -109,7 +109,7 @@ pipeline {
       options { skipDefaultCheckout() }
       steps {
         destroyTerraform()
-        //destroyCluster()
+        destroyCluster()
       }
     }
   }
@@ -121,17 +121,19 @@ pipeline {
 }
 
 def destroyCluster( ) {
-  withVaultEnv(){
+  echo 'skipped'
+  /*withVaultEnv(){
     sh(label: 'Destroy Cluster', script: 'make -C .ci destroy-cluster')
-  }
+  }*/
 }
 
 def destroyTerraform( ) {
-  withCloudEnv() {
+  echo 'skipped'
+  /*withCloudEnv() {
     withAzEnv() {
       sh(label: 'Destroy terraform plan', script: 'make -C .ci terraform-destroy')
     }
-  }
+  }*/
 }
 
 def withVaultEnv(Closure body){
