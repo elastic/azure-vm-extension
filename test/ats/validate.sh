@@ -51,13 +51,35 @@ function search() {
   curl -s -X GET -u "${ES_USERNAME}:${ES_PASSWORD}" "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
   {
     \"query\": {
-      \"match\": {
-        \"local_metadata.host.hostname\": \"${VM_NAME}\"
+      \"bool\": {
+        \"must\": [],
+        \"filter\": [
+          {
+            \"match_all\": {}
+          },
+          {
+            \"match_phrase\": {
+              \"local_metadata.host.hostname\": \"${VM_NAME}\"
+            }
+          },
+          {
+            \"match_phrase\": {
+              \"active\": true
+            }
+          }
+        ],
+        \"must_not\": [
+          {
+            \"match_phrase\": {
+              \"policy_id\": \"policy-elastic-agent-on-cloud\"
+            }
+          }
+        ]
       }
     }
   }
   " > "${temp_file}" || RESULT=1
-  jq -e '._source.policy_id != "policy-elastic-agent-on-cloud" and ._source.active == false' "${temp_file}" > /dev/null || RESULT=1
+  jq -e '.hits.total.value >= 1' "${temp_file}" > /dev/null || RESULT=1
   verify "$INDEX" $RESULT "${temp_file}"
 }
 
