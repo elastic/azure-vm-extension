@@ -241,12 +241,13 @@ def withAzEnv(Closure body) {
 }
 
 def withMatrixEnv(Closure body) {
-  def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','')
+  def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-S','')
   def uniqueId = "${stackVersion}-${BUILD_ID}-${BRANCH_NAME}"
+  echo "${stackVersion} - ${uniqueId}"
   withEnv([
     "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}",
-    "TF_VAR_prefix=${uniqueId.substring(10)}",
-    "TF_VAR_vmName=${uniqueId.substring(15)}"]) {
+    'TF_VAR_prefix=' + uniqueId.take(10),
+    'TF_VAR_vmName=' + uniqueId.take(15)]) {
     body()
   }
 }
