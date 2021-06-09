@@ -38,6 +38,7 @@ pipeline {
   stages {
     stage('ITs') {
       options { skipDefaultCheckout() }
+      failFast false
       matrix {
         agent { label 'ubuntu-20' }
         axes {
@@ -245,11 +246,12 @@ def withMatrixEnv(Closure body) {
   // 7.13.0-SNAPSHOT and 7.13.0 might clash so let's keep the -S for this.
   def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','-S').replaceAll('\\.', '-')
   def uniqueId = "${stackVersion}-${BUILD_ID}-${BRANCH_NAME}"
-  echo "${stackVersion} - ${uniqueId}"
   withEnv([
     "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}",
     'TF_VAR_prefix=' + uniqueId.take(10),
     'TF_VAR_vmName=' + uniqueId.take(15)]) {
+    echo "CLUSTER_NAME=${CLUSTER_NAME}"
+    echo "uniqueId=${uniqueId}"
     body()
   }
 }
