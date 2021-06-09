@@ -57,7 +57,7 @@ function search() {
     }
   }
   " > "${temp_file}" || RESULT=1
-  jq -e '._source.policy_id != "policy-elastic-agent-on-cloud" and ._source.active == false' > /dev/null || RESULT=1
+  jq -e '._source.policy_id != "policy-elastic-agent-on-cloud" and ._source.active == false' "${temp_file}" > /dev/null || RESULT=1
   verify "$INDEX" $RESULT "${temp_file}"
 }
 
