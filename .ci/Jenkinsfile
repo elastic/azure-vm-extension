@@ -46,18 +46,18 @@ pipeline {
         agent { label 'ubuntu-20' }
         axes {
           axis {
-            name 'ELASTIC_STACK_VERSION'
+            name 'STACK_VERSION'
             // The below line is part of the bump release automation
             // if you change anything please modifies the file
             // .ci/bump-stack-release-version.sh
-            values '8.0.0-SNAPSHOT', '7.14.0-SNAPSHOT', '7.13.1'
+            values '8.0.0-SNAPSHOT', '7.x', '7.13.1'
           }
         }
         // Exclude 8.0.0-SNAPSHOT since the deployment fails for APM & Fleet
         excludes {
           exclude {
             axis {
-              name 'ELASTIC_STACK_VERSION'
+              name 'STACK_VERSION'
               values '8.0.0-SNAPSHOT'
             }
           }
@@ -76,7 +76,7 @@ pipeline {
           stage('Create cluster'){
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Create Cluster ${ELASTIC_STACK_VERSION}") {
+              withGithubNotify(context: "Create Cluster ${STACK_VERSION}") {
                 withVaultEnv(){
                   sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
                 }
@@ -104,7 +104,7 @@ pipeline {
           stage('Terraform') {
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Terraform ${ELASTIC_STACK_VERSION}") {
+              withGithubNotify(context: "Terraform ${STACK_VERSION}") {
                 withCloudEnv() {
                   withAzEnv() {
                     sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
@@ -122,7 +122,7 @@ pipeline {
           stage('Validate') {
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Validate ${ELASTIC_STACK_VERSION}") {
+              withGithubNotify(context: "Validate ${STACK_VERSION}") {
                 withValidationEnv() {
                   sh(label: 'Validate', script: 'make -C .ci validate')
                 }
@@ -259,12 +259,14 @@ def withAzEnv(Closure body) {
 }
 
 def withMatrixEnv(Closure body) {
+  def elasticStackVersion = (env.STACK_VERSION == '7.x') ? artifactsApi(action: '7.x-version') : env.STACK_VERSION
   // -S need to avoid clashes between same version for releases and snapshots.
   // 7.13.0-SNAPSHOT and 7.13.0 might clash so let's keep the -S for this.
-  def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','-S').replaceAll('\\.', '-')
+  def stackVersion = elasticStackVersion.replaceAll('-SNAPSHOT','-S').replaceAll('\\.', '-')
   def uniqueId = "${stackVersion}-${BUILD_ID}-${BRANCH_NAME}"
   withEnv([
-    "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}",
+    "ELASTIC_STACK_VERSION=${elasticStackVersion}",
+    "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${elasticStackVersion}",
     'TF_VAR_prefix=' + uniqueId.take(9) + '0',
     'TF_VAR_vmName=' + uniqueId.take(14) + '0'
   ]) {

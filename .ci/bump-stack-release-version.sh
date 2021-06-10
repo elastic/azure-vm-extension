@@ -7,7 +7,7 @@
 #
 # Parameters:
 #	$1 -> the minor version to be bumped. Mandatory.
-#	$1 -> the major version to be bumped. Mandatory.
+#	$2 -> the major version to be bumped. Mandatory.
 #
 set -euo pipefail
 MSG="parameter missing."
@@ -22,11 +22,11 @@ else
 	SED="sed -i"
 fi
 
-echo "Update stack with versions ${VERSION_RELEASE} and ${VERSION_DEV}"
-${SED} -E -e "s#(values '8.0.0-SNAPSHOT',) '[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT', '[0-9]+\.[0-9]+\.[0-9]+'#\1: '${VERSION_RELEASE}-SNAPSHOT', '${VERSION_DEV}'#g" .ci/Jenkinsfile
+echo "Update stack with versions ${VERSION_DEV}"
+${SED} -E -e "s#(values '8.0.0-SNAPSHOT', '7.x',) '[0-9]+\.[0-9]+\.[0-9]+'#\1 '${VERSION_DEV}'#g" .ci/Jenkinsfile
 
 git add .ci/Jenkinsfile
-git diff --staged --quiet || git commit -m "[Automation] Update elastic stack release version to ${VERSION_RELEASE} and ${VERSION_DEV}"
+git diff --staged --quiet || git commit -m "[Automation] Update elastic stack release version to ${VERSION_DEV}"
 git --no-pager log -1
 
 echo "You can now push and create a Pull Request"
