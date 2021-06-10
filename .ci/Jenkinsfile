@@ -207,8 +207,7 @@ def withCloudEnv(Closure body) {
     withEnvMask(vars: [
       [var: 'TF_VAR_username', password: username],
       [var: 'TF_VAR_password', password: password],
-      [var: 'TF_VAR_cloudId', password: cloud_id],
-      [var: 'TF_VAR_password', password: password]
+      [var: 'TF_VAR_cloudId', password: cloud_id]
     ]){
       body()
     }
