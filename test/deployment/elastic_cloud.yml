@@ -37,7 +37,7 @@ kibana:
   apm_enabled: false
 
 apm:
-  enabled: false
+  enabled: true
   version: "{{ stack_version }}"
   type: ec
   mem: 0.5
