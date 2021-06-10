@@ -33,47 +33,46 @@ function search() {
   INDEX=$1
   RESULT=0
   temp_file=$(mktemp)
-  ## Retry a few times since the enrolment does not happen straight away when
-  ## the terraform VM extension has been applied.
-  curl \
-    --connect-timeout 30 \
-    --retry 30 \
-    --retry-delay 10 \
-    --retry-all-errors \
-    --fail \
-    -s -X GET \
-    -u "${ES_USERNAME}:${ES_PASSWORD}" \
-    "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
-  {
-    \"query\": {
-      \"bool\": {
-        \"must\": [],
-        \"filter\": [
-          {
-            \"match_all\": {}
-          },
-          {
-            \"match_phrase\": {
-              \"local_metadata.host.hostname\": \"${VM_NAME}\"
+  IT=0
+  while [[ $RESULT == 1 || IT -le 30 ]]; do
+    curl \
+      --fail \
+      -s -X GET \
+      -u "${ES_USERNAME}:${ES_PASSWORD}" \
+      "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
+    {
+      \"query\": {
+        \"bool\": {
+          \"must\": [],
+          \"filter\": [
+            {
+              \"match_all\": {}
+            },
+            {
+              \"match_phrase\": {
+                \"local_metadata.host.hostname\": \"${VM_NAME}\"
+              }
+            },
+            {
+              \"match_phrase\": {
+                \"active\": true
+              }
             }
-          },
-          {
-            \"match_phrase\": {
-              \"active\": true
+          ],
+          \"must_not\": [
+            {
+              \"match_phrase\": {
+                \"policy_id\": \"policy-elastic-agent-on-cloud\"
+              }
             }
-          }
-        ],
-        \"must_not\": [
-          {
-            \"match_phrase\": {
-              \"policy_id\": \"policy-elastic-agent-on-cloud\"
-            }
-          }
-        ]
+          ]
+        }
       }
     }
-  }
-  " > "${temp_file}" || RESULT=1
+    " > "${temp_file}" || RESULT=1
+    IT=$((IT+1))
+    sleep 5
+  done
   jq -e '.hits.total.value >= 1' "${temp_file}" > /dev/null || RESULT=1
   verify "$INDEX" $RESULT "${temp_file}"
 }
