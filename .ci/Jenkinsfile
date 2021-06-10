@@ -76,8 +76,10 @@ pipeline {
           stage('Create cluster'){
             options { skipDefaultCheckout() }
             steps {
-              withVaultEnv(){
-                sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+              withGithubNotify(context: "Create Cluster ${ELASTIC_STACK_VERSION}") {
+                withVaultEnv(){
+                  sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+                }
               }
             }
             post {
@@ -102,9 +104,11 @@ pipeline {
           stage('Terraform') {
             options { skipDefaultCheckout() }
             steps {
-              withCloudEnv() {
-                withAzEnv() {
-                  sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+              withGithubNotify(context: "Terraform ${ELASTIC_STACK_VERSION}") {
+                withCloudEnv() {
+                  withAzEnv() {
+                    sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+                  }
                 }
               }
             }
@@ -118,8 +122,10 @@ pipeline {
           stage('Validate') {
             options { skipDefaultCheckout() }
             steps {
-              withValidationEnv() {
-                sh(label: 'Validate', script: 'make -C .ci validate')
+              withGithubNotify(context: "Validate ${ELASTIC_STACK_VERSION}") {
+                withValidationEnv() {
+                  sh(label: 'Validate', script: 'make -C .ci validate')
+                }
               }
             }
             post {
