@@ -258,7 +258,8 @@ def withMatrixEnv(Closure body) {
   withEnv([
     "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}",
     'TF_VAR_prefix=' + uniqueId.take(9) + '0',
-    'TF_VAR_vmName=' + uniqueId.take(15)]) {
+    'TF_VAR_vmName=' + uniqueId.take(14) + '0'
+  ]) {
     echo "CLUSTER_NAME=${CLUSTER_NAME}"
     echo "uniqueId=${uniqueId}"
     body()
