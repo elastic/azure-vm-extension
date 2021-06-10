@@ -1,6 +1,6 @@
 # Ats
 
-This is the folder that contains the Acceptance Tests to validate if the Elastic Agent VM extension.
+This is the folder that contains the Acceptance Tests to validate the Elastic Agent VM extension.
 
 ## Requirements
 

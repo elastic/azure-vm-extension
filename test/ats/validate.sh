@@ -9,21 +9,6 @@ ES_PASSWORD=${2:?'Missing the Username:Password'}
 ES_URL=${3:?'Missing the Elasticsearch URL'}
 VM_NAME=${4:?'Missing the name of the Virtual Machine '}
 
-
-###############
-### Validations
-###############
-### Validate ElasticStack version to run the tests if supported
-RE='[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
-# shellcheck disable=SC2001
-MAJOR=$(echo "$ELASTIC_STACK_VERSION" | sed -e "s#$RE#\1#")
-# shellcheck disable=SC2001
-MINOR=$(echo "$ELASTIC_STACK_VERSION" | sed -e "s#$RE#\2#")
-if [ "${MAJOR}" -lt 8 ] && [ "${MINOR}" -le 12 ] ; then
-  echo "Validation is enabled only from 7.13+"
-  exit 0
-fi
-
 ###############
 ### Functions
 ###############
@@ -48,7 +33,15 @@ function search() {
   INDEX=$1
   RESULT=0
   temp_file=$(mktemp)
-  curl -s -X GET -u "${ES_USERNAME}:${ES_PASSWORD}" "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
+  ## Retry a few times since the enrolment does not happen straight away when
+  ## the terraform VM extension has been applied.
+  curl \
+    --connect-timeout 30 \
+    --retry 30 \
+    --retry-delay 10 \
+    -s -X GET \
+    -u "${ES_USERNAME}:${ES_PASSWORD}" \
+    "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
   {
     \"query\": {
       \"bool\": {
