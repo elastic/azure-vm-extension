@@ -53,6 +53,15 @@ pipeline {
             values '8.0.0-SNAPSHOT', '7.13.1-SNAPSHOT', '7.13.1'
           }
         }
+        // Exclude 8.0.0-SNAPSHOT since the deployment fails for APM & Fleet
+        excludes {
+          exclude {
+            axis {
+              name 'ELASTIC_STACK_VERSION'
+              values '8.0.0-SNAPSHOT'
+            }
+          }
+        }
         environment {
           HOME = "${env.WORKSPACE}"
           PATH = "${env.HOME}/bin:${env.PATH}"
