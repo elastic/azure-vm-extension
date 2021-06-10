@@ -39,6 +39,8 @@ function search() {
     --connect-timeout 30 \
     --retry 30 \
     --retry-delay 10 \
+    --retry-all-errors \
+    --fail \
     -s -X GET \
     -u "${ES_USERNAME}:${ES_PASSWORD}" \
     "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
