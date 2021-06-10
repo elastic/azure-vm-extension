@@ -41,6 +41,9 @@ pipeline {
     timeout(time: 2, unit: 'HOURS')
     disableConcurrentBuilds()
   }
+  parameters {
+    booleanParam(name: 'skipDestroy', defaultValue: "false", description: "Whether to skip the destroy of the cluster and terraform.")
+  }
   stages {
     stage('ITs') {
       options { skipDefaultCheckout() }
@@ -136,12 +139,20 @@ pipeline {
 }
 
 def destroyCluster( ) {
+  if (params.skipDestroy) {
+    echo 'Skipped the destroy cluster step'
+    return
+  }
   withVaultEnv(){
     sh(label: 'Destroy Cluster', script: 'make -C .ci destroy-cluster')
   }
 }
 
 def destroyTerraform( ) {
+  if (params.skipDestroy) {
+    echo 'Skipped the destroy terraform step'
+    return
+  }
   withCloudEnv() {
     withAzEnv() {
       sh(label: 'Destroy terraform plan', script: 'make -C .ci terraform-destroy')
