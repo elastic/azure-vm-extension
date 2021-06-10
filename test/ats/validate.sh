@@ -48,7 +48,15 @@ function search() {
   INDEX=$1
   RESULT=0
   temp_file=$(mktemp)
-  curl -s -X GET -u "${ES_USERNAME}:${ES_PASSWORD}" "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
+  ## Retry a few times since the enrolment does not happen straight away when
+  ## the terraform VM extension has been applied.
+  curl \
+    --connect-timeout 30 \
+    --retry 30 \
+    --retry-delay 10 \
+    -s -X GET \
+    -u "${ES_USERNAME}:${ES_PASSWORD}" \
+    "${ES_URL}"/"${INDEX}"/_search -H 'Content-Type: application/json' -d"
   {
     \"query\": {
       \"bool\": {

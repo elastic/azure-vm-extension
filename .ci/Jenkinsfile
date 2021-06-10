@@ -93,7 +93,6 @@ pipeline {
     stage('Validate') {
       options { skipDefaultCheckout() }
       steps {
-        sleep 200
         withValidationEnv() {
           sh(label: 'Validate', script: 'make -C .ci validate')
         }
