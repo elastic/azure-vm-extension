@@ -23,7 +23,7 @@ else
 fi
 
 echo "Update stack with versions ${VERSION_RELEASE} and ${VERSION_DEV}"
-${SED} -E -e "s#(values '8.0.0-SNAPSHOT',) '[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT', '[0-9]+\.[0-9]+\.[0-9]+'#\1: '${VERSION_RELEASE}-SNAPSHOT', '${VERSION_DEV}'#g" .ci/Jenkinsfile
+${SED} -E -e "s#(values '8.0.0-SNAPSHOT',) '[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT', '[0-9]+\.[0-9]+\.[0-9]+'#\1 '${VERSION_RELEASE}-SNAPSHOT', '${VERSION_DEV}'#g" .ci/Jenkinsfile
 
 git add .ci/Jenkinsfile
 git diff --staged --quiet || git commit -m "[Automation] Update elastic stack release version to ${VERSION_RELEASE} and ${VERSION_DEV}"
