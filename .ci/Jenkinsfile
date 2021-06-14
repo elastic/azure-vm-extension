@@ -24,13 +24,16 @@ import groovy.transform.Field
 @Field def vms = [:]
 
 pipeline {
-  agent none
+  agent { label 'ubuntu-20' }
   environment {
     REPO = "azure-vm-extension"
     NOTIFY_TO = credentials('notify-to')
     PIPELINE_LOG_LEVEL = 'INFO'
     LANG = "C.UTF-8"
     LC_ALL = "C.UTF-8"
+    ELASTIC_STACK_VERSION = '7.13.1'
+    HOME = "${env.WORKSPACE}"
+    PATH = "${env.HOME}/bin:${env.PATH}"
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
@@ -45,102 +48,72 @@ pipeline {
     booleanParam(name: 'skipDestroy', defaultValue: "false", description: "Whether to skip the destroy of the cluster and terraform.")
   }
   stages {
-    stage('ITs') {
+    stage('Checkout'){
       options { skipDefaultCheckout() }
-      failFast false
-      matrix {
-        agent { label 'ubuntu-20' }
-        axes {
-          axis {
-            name 'ELASTIC_STACK_VERSION'
-            // The below line is part of the bump release automation
-            // if you change anything please modifies the file
-            // .ci/bump-stack-release-version.sh
-            values '8.0.0-SNAPSHOT', '7.13.1-SNAPSHOT', '7.13.1'
+      steps {
+        deleteDir()
+        checkout scm
+      }
+    }
+    stage('Create cluster'){
+      options { skipDefaultCheckout() }
+      steps {
+        withGithubNotify(context: "Create Cluster ${ELASTIC_STACK_VERSION}") {
+          withVaultEnv(){
+            sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
           }
         }
-        // Exclude 8.0.0-SNAPSHOT since the deployment fails for APM & Fleet
-        excludes {
-          exclude {
-            axis {
-              name 'ELASTIC_STACK_VERSION'
-              values '8.0.0-SNAPSHOT'
+      }
+      post {
+        failure {
+          destroyCluster()
+        }
+      }
+    }
+    stage('Prepare tools') {
+      options { skipDefaultCheckout() }
+      steps {
+        withCloudEnv() {
+          sh(label: 'Prepare tools', script: 'make -C .ci prepare')
+        }
+      }
+      post {
+        failure {
+          destroyCluster()
+        }
+      }
+    }
+    stage('Terraform') {
+      options { skipDefaultCheckout() }
+      steps {
+        withGithubNotify(context: "Terraform ${ELASTIC_STACK_VERSION}") {
+          withCloudEnv() {
+            withAzEnv() {
+              sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
             }
           }
         }
-        environment {
-          HOME = "${env.WORKSPACE}"
-          PATH = "${env.HOME}/bin:${env.PATH}"
+      }
+      post {
+        failure {
+          destroyTerraform()
+          destroyCluster()
         }
-        stages {
-          stage('Checkout'){
-            steps {
-              deleteDir()
-              checkout scm
-            }
+      }
+    }
+    stage('Validate') {
+      options { skipDefaultCheckout() }
+      steps {
+        withGithubNotify(context: "Validate ${ELASTIC_STACK_VERSION}") {
+          withValidationEnv() {
+            sh(label: 'Validate', script: 'make -C .ci validate')
           }
-          stage('Create cluster'){
-            options { skipDefaultCheckout() }
-            steps {
-              withGithubNotify(context: "Create Cluster ${ELASTIC_STACK_VERSION}") {
-                withVaultEnv(){
-                  sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
-                }
-              }
-            }
-            post {
-              failure {
-                destroyCluster()
-              }
-            }
-          }
-          stage('Prepare tools') {
-            options { skipDefaultCheckout() }
-            steps {
-              withCloudEnv() {
-                sh(label: 'Prepare tools', script: 'make -C .ci prepare')
-              }
-            }
-            post {
-              failure {
-                destroyCluster()
-              }
-            }
-          }
-          stage('Terraform') {
-            options { skipDefaultCheckout() }
-            steps {
-              withGithubNotify(context: "Terraform ${ELASTIC_STACK_VERSION}") {
-                withCloudEnv() {
-                  withAzEnv() {
-                    sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
-                  }
-                }
-              }
-            }
-            post {
-              failure {
-                destroyTerraform()
-                destroyCluster()
-              }
-            }
-          }
-          stage('Validate') {
-            options { skipDefaultCheckout() }
-            steps {
-              withGithubNotify(context: "Validate ${ELASTIC_STACK_VERSION}") {
-                withValidationEnv() {
-                  sh(label: 'Validate', script: 'make -C .ci validate')
-                }
-              }
-            }
-            post {
-              always {
-                destroyTerraform()
-                destroyCluster()
-              }
-            }
-          }
+        }
+      }
+      post {
+        always {
+          destroyTerraform()
+          destroyCluster()
         }
       }
     }
