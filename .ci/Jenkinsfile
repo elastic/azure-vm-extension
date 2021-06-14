@@ -212,23 +212,7 @@ def withValidationEnv(Closure body) {
 
 def withCloudEnv(Closure body) {
   withMatrixEnv() {
-
-    def props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/ec-deployment")
-    if (props?.errors) {
-      error "withCloudEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
-    }
-    def value = props?.data
-    def cloud_id = value?.cloud_id
-    def username = value?.username
-    def password = value?.password
-    if(cloud_id == null || username == null || password == null){
-      error "withCloudEnv: was not possible to get the authentication info."
-    }
-    withEnvMask(vars: [
-      [var: 'TF_VAR_username', password: username],
-      [var: 'TF_VAR_password', password: password],
-      [var: 'TF_VAR_cloudId', password: cloud_id]
-    ]){
+    withCloudEnv(cluster: env.CLUSTER_NAME) {
       body()
     }
   }
