@@ -17,6 +17,12 @@
 // under the License.
 @Library('apm@current') _
 
+import groovy.transform.Field
+
+// VM names created to run later on the terraform plan
+// key is the cluster name and value is the VM name
+@Field def vms = [:]
+
 pipeline {
   agent none
   environment {
@@ -186,25 +192,7 @@ def withVaultEnv(Closure body){
 
 def withValidationEnv(Closure body) {
   withMatrixEnv() {
-    def props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/k8s-elasticsearch")
-    if (props?.errors) {
-      error "withValidationEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
-    }
-
-    def esJson = props?.data.value
-    def es = toJSON(esJson)
-    def es_url = es.url
-    def username = es.username
-    def password = es.password
-    if(es_url == null || username == null || password == null){
-      error "withValidationEnv: was not possible to get the authentication info."
-    }
-    withEnvMask(vars: [
-      [var: 'ES_URL', password: es_url],
-      [var: 'ES_USERNAME', password: username],
-      [var: 'ES_PASSWORD', password: password],
-      [var: 'VM_NAME', password: "${env.TF_VAR_vmName}"]
-    ]){
+    withClusterEnv(cluster: env.CLUSTER_NAME) {
       body()
     }
   }
@@ -212,64 +200,48 @@ def withValidationEnv(Closure body) {
 
 def withCloudEnv(Closure body) {
   withMatrixEnv() {
-    def props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/ec-deployment")
-    if (props?.errors) {
-      error "withCloudEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
-    }
-    def value = props?.data
-    def cloud_id = value?.cloud_id
-    def username = value?.username
-    def password = value?.password
-    if(cloud_id == null || username == null || password == null){
-      error "withCloudEnv: was not possible to get the authentication info."
-    }
-    withEnvMask(vars: [
-      [var: 'TF_VAR_username', password: username],
-      [var: 'TF_VAR_password', password: password],
-      [var: 'TF_VAR_cloudId', password: cloud_id]
-    ]){
-      body()
+    withCloudEnv(cluster: env.CLUSTER_NAME) {
+      // withCloudEnv creates different env variables, let's create the
+      // ones needed for the terraform runs
+      withEnvMask(vars: [
+        [var: 'TF_VAR_username', password: env.CLOUD_USERNAME],
+        [var: 'TF_VAR_password', password: env.CLOUD_PASSWORD],
+        [var: 'TF_VAR_cloudId', password: env.CLOUD_ID]
+      ]){
+        body()
+      }
     }
   }
 }
 
 def withAzEnv(Closure body) {
   withMatrixEnv() {
-    def props = getVaultSecret(secret: 'secret/observability-team/ci/service-account/azure-vm-extension')
-    if (props?.errors) {
-      error "withAzEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
-    }
-    def value = props?.data
-    def tenant = value?.tenant
-    def username = value?.username
-    def password = value?.password
-    def subscription = value?.subscription
-    if(tenant == null || username == null || password == null || subscription == null){
-      error "withAzEnv: was not possible to get the authentication info."
-    }
-    withEnvMask(vars: [
-      [var: 'AZ_USERNAME', password: username],
-      [var: 'AZ_PASSWORD', password: password],
-      [var: 'AZ_TENANT', password: tenant],
-      [var: 'AZ_SUBSCRIPTION', password: subscription]
-    ]){
+    withAzureEnv(secret: 'secret/observability-team/ci/service-account/azure-vm-extension') {
       body()
     }
   }
 }
 
 def withMatrixEnv(Closure body) {
-  // -S need to avoid clashes between same version for releases and snapshots.
-  // 7.13.0-SNAPSHOT and 7.13.0 might clash so let's keep the -S for this.
-  def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','-S').replaceAll('\\.', '-')
-  def uniqueId = "${stackVersion}-${BUILD_ID}-${BRANCH_NAME}"
+  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}"
+  def vmName = getCachedVmNameOrAssignVmName(clusterName)
   withEnv([
-    "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}",
-    'TF_VAR_prefix=' + uniqueId.take(9) + '0',
-    'TF_VAR_vmName=' + uniqueId.take(14) + '0'
+    "CLUSTER_NAME=${clusterName}",
+    'TF_VAR_prefix=tst-' + vmName.take(6),
+    "TF_VAR_vmName=${vmName}",
+    "VM_NAME=${vmName}"
   ]) {
-    echo "CLUSTER_NAME=${CLUSTER_NAME}"
-    echo "uniqueId=${uniqueId}"
+    echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix}"
     body()
+  }
+}
+
+def getCachedVmNameOrAssignVmName(String key) {
+  if (vms.containsKey(key)) {
+    return vms.get(key)
+  } else {
+    def vmName = randomString(size: 15)
+    vms[key] = vmName
+    return vmName
   }
 }
