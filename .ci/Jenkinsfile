@@ -212,6 +212,7 @@ def withValidationEnv(Closure body) {
 
 def withCloudEnv(Closure body) {
   withMatrixEnv() {
+
     def props = getVaultSecret(secret: "secret/observability-team/ci/test-clusters/${env.CLUSTER_NAME}/ec-deployment")
     if (props?.errors) {
       error "withCloudEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
@@ -235,24 +236,7 @@ def withCloudEnv(Closure body) {
 
 def withAzEnv(Closure body) {
   withMatrixEnv() {
-    def props = getVaultSecret(secret: 'secret/observability-team/ci/service-account/azure-vm-extension')
-    if (props?.errors) {
-      error "withAzEnv: Unable to get credentials from the vault: ${props.errors.toString()}"
-    }
-    def value = props?.data
-    def tenant = value?.tenant
-    def username = value?.username
-    def password = value?.password
-    def subscription = value?.subscription
-    if(tenant == null || username == null || password == null || subscription == null){
-      error "withAzEnv: was not possible to get the authentication info."
-    }
-    withEnvMask(vars: [
-      [var: 'AZ_USERNAME', password: username],
-      [var: 'AZ_PASSWORD', password: password],
-      [var: 'AZ_TENANT', password: tenant],
-      [var: 'AZ_SUBSCRIPTION', password: subscription]
-    ]){
+    withAzureEnv(secret: 'secret/observability-team/ci/service-account/azure-vm-extension') {
       body()
     }
   }
