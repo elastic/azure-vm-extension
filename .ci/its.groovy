@@ -217,9 +217,9 @@ def withAzEnv(Closure body) {
 }
 
 def withMatrixEnv(Closure body) {
-  def vmName = getCachedVmNameOrAssignVmName(clusterName)
   def stackVersion = (env.STACK_VERSION == '7.x') ? artifactsApi(action: '7.x-version') : env.STACK_VERSION
   def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${stackVersion}"
+  def vmName = getCachedVmNameOrAssignVmName(clusterName)
   withEnv([
     "CLUSTER_NAME=${clusterName}",
     'TF_VAR_prefix=tst-' + vmName.take(6),
