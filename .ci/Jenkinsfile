@@ -209,18 +209,13 @@ def withAzEnv(Closure body) {
 }
 
 def withMatrixEnv(Closure body) {
-  // -S need to avoid clashes between same version for releases and snapshots.
-  // 7.13.0-SNAPSHOT and 7.13.0 might clash so let's keep the -S for this.
-  def stackVersion = env.ELASTIC_STACK_VERSION.replaceAll('-SNAPSHOT','-S').replaceAll('\\.', '-')
-  def uniqueId = "${stackVersion}-${BUILD_ID}-${BRANCH_NAME}"
   withEnv([
     "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}",
-    'TF_VAR_prefix=' + uniqueId.take(9) + '0',
-    'TF_VAR_vmName=' + uniqueId.take(14) + '0',
+    'TF_VAR_prefix=tst' + randomString(size: 7),
+    'TF_VAR_vmName=' + randomString(size: 15),
     "VM_NAME=${env.TF_VAR_vmName}"
   ]) {
     echo "CLUSTER_NAME=${CLUSTER_NAME}"
-    echo "uniqueId=${uniqueId}"
     body()
   }
 }
