@@ -195,7 +195,15 @@ def withValidationEnv(Closure body) {
 def withCloudEnv(Closure body) {
   withMatrixEnv() {
     withCloudEnv(cluster: env.CLUSTER_NAME) {
-      body()
+      // withCloudEnv creates different env variables, let's create the
+      // ones needed for the terraform runs
+      withEnvMask(vars: [
+        [var: 'TF_VAR_username', password: env.CLOUD_USERNAME],
+        [var: 'TF_VAR_password', password: env.CLOUD_PASSWORD],
+        [var: 'TF_VAR_cloudId', password: env.CLOUD_ID]
+      ]){
+        body()
+      }
     }
   }
 }
