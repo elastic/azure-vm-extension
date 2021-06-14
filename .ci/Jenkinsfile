@@ -17,6 +17,12 @@
 // under the License.
 @Library('apm@current') _
 
+import groovy.transform.Field
+
+// VM names created to run later on the terraform plan
+// key is the cluster name and value is the VM name
+@Field def vms = [:]
+
 pipeline {
   agent none
   environment {
@@ -217,14 +223,25 @@ def withAzEnv(Closure body) {
 }
 
 def withMatrixEnv(Closure body) {
-  def vmName = randomString(size: 15)
+  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}"
+  def vmName = getCachedVmNameOrAssignVmName(clusterName)
   withEnv([
-    "CLUSTER_NAME=tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}",
-    'TF_VAR_prefix=tst' + randomString(size: 7),
+    "CLUSTER_NAME=${clusterName}",
+    'TF_VAR_prefix=tst-' + vmName.take(6),
     "TF_VAR_vmName=${vmName}",
     "VM_NAME=${vmName}"
   ]) {
     echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix}"
     body()
+  }
+}
+
+def getCachedVmNameOrAssignVmName(String key) {
+  if (vms.containsKey(key)) {
+    return vms.get(key)
+  } else {
+    def vmName = randomString(size: 15)
+    vms[key] = vmName
+    return vmName
   }
 }
