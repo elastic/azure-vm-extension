@@ -55,7 +55,7 @@ pipeline {
         agent { label 'ubuntu-20' }
         axes {
           axis {
-            name 'ELASTIC_STACK_VERSION'
+            name 'STACK_VERSION'
             // The below line is part of the bump release automation
             // if you change anything please modifies the file
             // .ci/bump-stack-release-version.sh
@@ -217,13 +217,15 @@ def withAzEnv(Closure body) {
 }
 
 def withMatrixEnv(Closure body) {
-  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}"
   def vmName = getCachedVmNameOrAssignVmName(clusterName)
+  def stackVersion = (env.STACK_VERSION == '7.x') ? artifactsApi(action: '7.x-version') : env.STACK_VERSION
+  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${stackVersion}"
   withEnv([
     "CLUSTER_NAME=${clusterName}",
     'TF_VAR_prefix=tst-' + vmName.take(6),
     "TF_VAR_vmName=${vmName}",
-    "VM_NAME=${vmName}"
+    "VM_NAME=${vmName}",
+    "ELASTIC_STACK_VERSION=${stackVersion}"
   ]) {
     echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix}"
     body()
