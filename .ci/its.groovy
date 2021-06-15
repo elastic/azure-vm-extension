@@ -76,7 +76,7 @@ pipeline {
           stage('Create cluster'){
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Create Cluster ${ELASTIC_STACK_VERSION}") {
+              withGithubNotify(context: "Create Cluster ${STACK_VERSION}") {
                 withVaultEnv(){
                   sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
                 }
@@ -104,7 +104,7 @@ pipeline {
           stage('Terraform') {
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Terraform ${ELASTIC_STACK_VERSION}") {
+              withGithubNotify(context: "Terraform ${STACK_VERSION}") {
                 withCloudEnv() {
                   withAzEnv() {
                     sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
@@ -122,7 +122,7 @@ pipeline {
           stage('Validate') {
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Validate ${ELASTIC_STACK_VERSION}") {
+              withGithubNotify(context: "Validate ${STACK_VERSION}") {
                 withValidationEnv() {
                   sh(label: 'Validate', script: 'make -C .ci validate')
                 }
