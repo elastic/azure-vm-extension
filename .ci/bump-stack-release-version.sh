@@ -23,7 +23,7 @@ else
 fi
 
 echo "Update stack with versions ${VERSION_RELEASE} and ${VERSION_DEV}"
-${SED} -E -e "s#(ELASTIC_STACK_VERSION = ) '[0-9]+\.[0-9]+\.[0-9]+'#\1 '${VERSION_RELEASE}'#g" .ci/Jenkinsfile
+${SED} -E -e "s#(ELASTIC_STACK_VERSION =) '[0-9]+\.[0-9]+\.[0-9]+'#\1 '${VERSION_RELEASE}'#g" .ci/Jenkinsfile
 ${SED} -E -e "s#(values '8.0.0-SNAPSHOT', '7.x',) '[0-9]+\.[0-9]+\.[0-9]+'#\1 '${VERSION_DEV}'#g" .ci/its.groovy
 
 git add .ci/Jenkinsfile .ci/its.groovy
