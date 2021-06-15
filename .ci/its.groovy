@@ -31,6 +31,7 @@ pipeline {
     PIPELINE_LOG_LEVEL = 'INFO'
     LANG = "C.UTF-8"
     LC_ALL = "C.UTF-8"
+    SLACK_CHANNEL = '#beats-build'
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
@@ -141,7 +142,7 @@ pipeline {
   }
   post {
     cleanup {
-      notifyBuildResult(prComment: true)
+      notifyBuildResult(prComment: true, slackHeader: "*ITs*: ${env.REPO}", slackChannel: "${env.SLACK_CHANNEL}", slackComment: true, slackNotify: (isBranch() || isTag()))
     }
   }
 }
