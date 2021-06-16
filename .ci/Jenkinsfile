@@ -24,7 +24,7 @@ import groovy.transform.Field
 @Field def vms = [:]
 
 pipeline {
-  agent { label 'ubuntu-20' }
+  agent none
   environment {
     REPO = "azure-vm-extension"
     NOTIFY_TO = credentials('notify-to')
@@ -52,6 +52,7 @@ pipeline {
       options { skipDefaultCheckout() }
       failFast false
       matrix {
+        agent { label 'ubuntu-20' }
         axes {
           axis {
             name 'OS_VERSION'
