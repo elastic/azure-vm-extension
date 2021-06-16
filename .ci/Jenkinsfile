@@ -32,8 +32,6 @@ pipeline {
     LANG = "C.UTF-8"
     LC_ALL = "C.UTF-8"
     ELASTIC_STACK_VERSION = '7.13.1'
-    HOME = "${env.WORKSPACE}"
-    PATH = "${env.HOME}/bin:${env.PATH}"
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
@@ -58,6 +56,10 @@ pipeline {
             name 'OS_VERSION'
             values 'linux', 'windows'
           }
+        }
+        environment {
+          HOME = "${env.WORKSPACE}"
+          PATH = "${env.HOME}/bin:${env.PATH}"
         }
         stages {
           stage('Checkout'){
