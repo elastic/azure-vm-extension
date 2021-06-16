@@ -88,7 +88,17 @@ ifndef VM_NAME
 	@echo "Please set VM_NAME in the environment to test the extension"
 	exit 1
 endif
-	../test/ats/validate.sh "$(ES_USERNAME)" "$(ES_PASSWORD)" "$(ES_URL)" "$(VM_NAME)"
+	@docker run --rm -t \
+		--volume "$(PWD)":/app \
+		--workdir /app \
+		--env ES_USERNAME="$(ES_USERNAME)" \
+		--env ES_PASSWORD="$(ES_PASSWORD)" \
+		--env ES_URL="$(ES_URL)" \
+		--env VM_NAME="$(VM_NAME)" \
+		--env TYPE=test \
+		--env HOME=/app \
+		-u $(CURRENT_UID):$(CURRENT_GID) \
+		$(DOCKER_IMAGE)
 
 create-cluster:  ## Create a cluster in the cloud
 ifndef CLUSTER_NAME

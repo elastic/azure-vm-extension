@@ -6,10 +6,16 @@ This is the folder that contains the Acceptance Tests to validate the Elastic Ag
 
 1. Create a Elastic Cloud cluster
 2. Run the terraform plan.
+3. Install the requirements.txt dependencies defined in .ci/docker/azure-vm-tools/requirements.txt
 
 ## How does it work?
 
 1. Run the below script in your terminal to test the given VM in the given cloud environment.
+
 ```bash
-$ validate.sh <ES_USERNAME> <ES_PASSWORD> <ES_URL> <VM_NAME>
+$ ES_USERNAME=<ES_USERNAME> \
+  ES_PASSWORD=<ES_PASSWORD> \
+  ES_URL=<ES_URL> \
+  VM_NAME=<VM_NAME> \
+  python -m xmlrunner validate.py
 ```

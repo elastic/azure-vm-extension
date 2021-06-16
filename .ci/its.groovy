@@ -131,6 +131,7 @@ pipeline {
             }
             post {
               always {
+                junit(allowEmptyResults: true, keepLongStdio: true, testResults: 'test/ats/TEST-*.xml')
                 destroyTerraform()
                 destroyCluster()
               }
