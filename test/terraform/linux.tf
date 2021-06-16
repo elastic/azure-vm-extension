@@ -27,7 +27,7 @@ resource "azurerm_linux_virtual_machine" "main" {
 }
 
 ## See https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension
-resource "azurerm_virtual_machine_extension" "main" {
+resource "azurerm_virtual_machine_extension" "linux" {
   count                = var.isWindows ? 0 : 1
   name                 = "ElasticAgent.linux"
   virtual_machine_id   = azurerm_linux_virtual_machine.main.id
