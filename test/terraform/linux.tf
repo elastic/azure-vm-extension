@@ -30,7 +30,7 @@ resource "azurerm_linux_virtual_machine" "main" {
 resource "azurerm_virtual_machine_extension" "linux" {
   count                = var.isWindows ? 0 : 1
   name                 = "ElasticAgent.linux"
-  virtual_machine_id   = azurerm_linux_virtual_machine.main.id
+  virtual_machine_id   = azurerm_linux_virtual_machine.main[count.index].id
   publisher            = "Elastic"
   type                 = "ElasticAgent.linux"
   type_handler_version = "1.1"
