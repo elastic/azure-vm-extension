@@ -24,16 +24,14 @@ import groovy.transform.Field
 @Field def vms = [:]
 
 pipeline {
-  agent { label 'ubuntu-20' }
+  agent none
   environment {
     REPO = "azure-vm-extension"
     NOTIFY_TO = credentials('notify-to')
     PIPELINE_LOG_LEVEL = 'INFO'
     LANG = "C.UTF-8"
     LC_ALL = "C.UTF-8"
-    ELASTIC_STACK_VERSION = '7.13.1'
-    HOME = "${env.WORKSPACE}"
-    PATH = "${env.HOME}/bin:${env.PATH}"
+    SLACK_CHANNEL = '#beats-build'
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
@@ -44,83 +42,107 @@ pipeline {
     timeout(time: 2, unit: 'HOURS')
     disableConcurrentBuilds()
   }
+  triggers {
+    cron("${(env.BRANCH_NAME.trim() == 'master') ? 'H H(5-6) * * 1-5' : ''}")
+  }
   parameters {
     booleanParam(name: 'skipDestroy', defaultValue: "false", description: "Whether to skip the destroy of the cluster and terraform.")
   }
   stages {
-    stage('Checkout'){
+    stage('ITs') {
       options { skipDefaultCheckout() }
-      steps {
-        deleteDir()
-        checkout scm
-      }
-    }
-    stage('Create cluster'){
-      options { skipDefaultCheckout() }
-      steps {
-        withGithubNotify(context: "Create Cluster ${ELASTIC_STACK_VERSION}") {
-          withVaultEnv(){
-            sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+      failFast false
+      matrix {
+        agent { label 'ubuntu-20' }
+        axes {
+          axis {
+            name 'STACK_VERSION'
+            // The below line is part of the bump release automation
+            // if you change anything please modifies the file
+            // .ci/bump-stack-release-version.sh
+            values '8.0.0-SNAPSHOT', '7.x', '7.13.2'
           }
         }
-      }
-      post {
-        failure {
-          destroyCluster()
+        environment {
+          HOME = "${env.WORKSPACE}"
+          PATH = "${env.HOME}/bin:${env.PATH}"
         }
-      }
-    }
-    stage('Prepare tools') {
-      options { skipDefaultCheckout() }
-      steps {
-        withCloudEnv() {
-          sh(label: 'Prepare tools', script: 'make -C .ci prepare')
-        }
-      }
-      post {
-        failure {
-          destroyCluster()
-        }
-      }
-    }
-    stage('Terraform') {
-      options { skipDefaultCheckout() }
-      steps {
-        withGithubNotify(context: "Terraform ${ELASTIC_STACK_VERSION}") {
-          withCloudEnv() {
-            withAzEnv() {
-              sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+        stages {
+          stage('Checkout'){
+            steps {
+              deleteDir()
+              checkout scm
             }
           }
-        }
-      }
-      post {
-        failure {
-          destroyTerraform()
-          destroyCluster()
-        }
-      }
-    }
-    stage('Validate') {
-      options { skipDefaultCheckout() }
-      steps {
-        withGithubNotify(context: "Validate ${ELASTIC_STACK_VERSION}") {
-          withValidationEnv() {
-            sh(label: 'Validate', script: 'make -C .ci validate')
+          stage('Create cluster'){
+            options { skipDefaultCheckout() }
+            steps {
+              withGithubNotify(context: "Create Cluster ${STACK_VERSION}") {
+                withVaultEnv(){
+                  sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+                }
+              }
+            }
+            post {
+              failure {
+                destroyCluster()
+              }
+            }
           }
-        }
-      }
-      post {
-        always {
-          destroyTerraform()
-          destroyCluster()
+          stage('Prepare tools') {
+            options { skipDefaultCheckout() }
+            steps {
+              withCloudEnv() {
+                sh(label: 'Prepare tools', script: 'make -C .ci prepare')
+              }
+            }
+            post {
+              failure {
+                destroyCluster()
+              }
+            }
+          }
+          stage('Terraform') {
+            options { skipDefaultCheckout() }
+            steps {
+              withGithubNotify(context: "Terraform ${STACK_VERSION}") {
+                withCloudEnv() {
+                  withAzEnv() {
+                    sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+                  }
+                }
+              }
+            }
+            post {
+              failure {
+                destroyTerraform()
+                destroyCluster()
+              }
+            }
+          }
+          stage('Validate') {
+            options { skipDefaultCheckout() }
+            steps {
+              withGithubNotify(context: "Validate ${STACK_VERSION}") {
+                withValidationEnv() {
+                  sh(label: 'Validate', script: 'make -C .ci validate')
+                }
+              }
+            }
+            post {
+              always {
+                destroyTerraform()
+                destroyCluster()
+              }
+            }
+          }
         }
       }
     }
   }
   post {
     cleanup {
-      notifyBuildResult(prComment: true)
+      notifyBuildResult(prComment: true, slackHeader: "*ITs*: ${env.REPO}", slackChannel: "${env.SLACK_CHANNEL}", slackComment: true, slackNotify: (isBranch() || isTag()))
     }
   }
 }
@@ -196,13 +218,15 @@ def withAzEnv(Closure body) {
 }
 
 def withMatrixEnv(Closure body) {
-  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}"
+  def stackVersion = (env.STACK_VERSION == '7.x') ? artifactsApi(action: '7.x-version') : env.STACK_VERSION
+  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${stackVersion}"
   def vmName = getCachedVmNameOrAssignVmName(clusterName)
   withEnv([
     "CLUSTER_NAME=${clusterName}",
     'TF_VAR_prefix=tst-' + vmName.take(6),
     "TF_VAR_vmName=${vmName}",
-    "VM_NAME=${vmName}"
+    "VM_NAME=${vmName}",
+    "ELASTIC_STACK_VERSION=${stackVersion}"
   ]) {
     echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix}"
     body()
