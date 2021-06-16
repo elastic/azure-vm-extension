@@ -7,7 +7,8 @@ set -eo pipefail
 ES_USERNAME=${1:?'Missing the Username:Password'}
 ES_PASSWORD=${2:?'Missing the Username:Password'}
 ES_URL=${3:?'Missing the Elasticsearch URL'}
-VM_NAME=${4:?'Missing the name of the Virtual Machine '}
+VM_NAME=${4:?'Missing the name of the Virtual Machine'}
+IS_WINDOWS=${5:?'Missing whether it is a windows VM'}
 
 ###############
 ### Functions
@@ -110,9 +111,16 @@ for INDEX in '.ds-metrics-system.memory-default-*' '.ds-metrics-system.cpu-defau
   count "${INDEX}"
 done
 
-for INDEX in '.ds-logs-system.application-default-*' ; do
-  echo "Validate whether the logs are coming in for ${VM_NAME} in ${INDEX}"
-  count "${INDEX}"
-done
+if [ "${IS_WINDOWS}" == "true" ] ; then
+  for INDEX in '.ds-logs-system.application-default-*' ; do
+    echo "Validate whether the logs are coming in for ${VM_NAME} in ${INDEX}"
+    count "${INDEX}"
+  done
+else
+  for INDEX in '.ds-logs-system.syslog-default-*' ; do
+    echo "Validate whether the logs are coming in for ${VM_NAME} in ${INDEX}"
+    count "${INDEX}"
+  done
+fi
 
 exit $STATUS

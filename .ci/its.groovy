@@ -62,6 +62,10 @@ pipeline {
             // .ci/bump-stack-release-version.sh
             values '8.0.0-SNAPSHOT', '7.x', '7.13.2'
           }
+          axis {
+            name 'OS_VERSION'
+            values 'linux', 'windows'
+          }
         }
         environment {
           HOME = "${env.WORKSPACE}"
@@ -77,7 +81,7 @@ pipeline {
           stage('Create cluster'){
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Create Cluster ${STACK_VERSION}") {
+              withGithubNotify(context: "Create Cluster ${STACK_VERSION} ${OS_VERSION}") {
                 withVaultEnv(){
                   sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
                 }
@@ -105,7 +109,7 @@ pipeline {
           stage('Terraform') {
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Terraform ${STACK_VERSION}") {
+              withGithubNotify(context: "Terraform ${STACK_VERSION} ${OS_VERSION}") {
                 withCloudEnv() {
                   withAzEnv() {
                     sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
@@ -123,7 +127,7 @@ pipeline {
           stage('Validate') {
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Validate ${STACK_VERSION}") {
+              withGithubNotify(context: "Validate ${STACK_VERSION} ${OS_VERSION}") {
                 withValidationEnv() {
                   sh(label: 'Validate', script: 'make -C .ci validate')
                 }
@@ -219,16 +223,17 @@ def withAzEnv(Closure body) {
 
 def withMatrixEnv(Closure body) {
   def stackVersion = (env.STACK_VERSION == '7.x') ? artifactsApi(action: '7.x-version') : env.STACK_VERSION
-  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${stackVersion}"
+  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${stackVersion}-${env.OS_VERSION}"
   def vmName = getCachedVmNameOrAssignVmName(clusterName)
   withEnv([
     "CLUSTER_NAME=${clusterName}",
     'TF_VAR_prefix=tst-' + vmName.take(6),
     "TF_VAR_vmName=${vmName}",
+    "TF_VAR_isWindows=${isWindows()}",
     "VM_NAME=${vmName}",
     "ELASTIC_STACK_VERSION=${stackVersion}"
   ]) {
-    echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix}"
+    echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix} - TF_VAR_isWindows=${TF_VAR_isWindows}"
     body()
   }
 }
@@ -241,4 +246,8 @@ def getCachedVmNameOrAssignVmName(String key) {
     vms[key] = vmName
     return vmName
   }
+}
+
+def isWindows() {
+  return env.OS_VERSION?.toLowerCase()?.equals('windows')
 }

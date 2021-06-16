@@ -48,3 +48,9 @@ variable "vmName" {
     error_message = "Maximum length of vmName is 15 characters."
   }
 }
+
+variable "isWindows" {
+  description = "If true, resources will be a Windows"
+  type        = bool
+  default     = true
+}

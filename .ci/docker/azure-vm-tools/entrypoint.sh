@@ -19,6 +19,7 @@ export ARM_TENANT_ID="${AZ_TENANT}"
 
 echo "Go to the terraform folder"
 cd test/terraform
+
 if [ "${TYPE}" == "run" ] ; then
 	echo "Configure the terraform environment"
 	terraform init
@@ -32,6 +33,7 @@ if [ "${TYPE}" == "run" ] ; then
 	TF_VAR_cloudId="${TF_VAR_cloudId}" \
 	TF_VAR_prefix="${TF_VAR_prefix}" \
 	TF_VAR_vmName="${TF_VAR_vmName}" \
+	TF_VAR_isWindows="${TF_VAR_isWindows}" \
 	terraform apply -auto-approve
 fi
 
@@ -42,5 +44,6 @@ if [ "${TYPE}" == "destroy" ] ; then
 	TF_VAR_cloudId="${TF_VAR_cloudId}" \
 	TF_VAR_prefix="${TF_VAR_prefix}" \
 	TF_VAR_vmName="${TF_VAR_vmName}" \
+	TF_VAR_isWindows="${TF_VAR_isWindows}" \
 	terraform destroy -auto-approve
 fi
