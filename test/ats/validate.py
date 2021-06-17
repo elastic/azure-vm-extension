@@ -13,7 +13,7 @@ class TestIndices(unittest.TestCase):
     )
 
     hostname = os.environ.get('VM_NAME')
-    isWindows = os.getenv('TF_VAR_isWindows', True)
+    isWindows = "true" in os.getenv('TF_VAR_isWindows', 'true').lower()
 
     def countEnrolment(self, index_name, hostname, compareWith):
         tries = 1
