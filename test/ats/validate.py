@@ -56,6 +56,12 @@ class TestIndices(unittest.TestCase):
         print(records_count)
         self.assertTrue(count >= compare, "Expected at least one entry in index {}, got {}".format(index_name, count))
 
+    def test_green_indices(self):
+        records_indices = self.es.cat.indices()
+        ## Print will be shown in the junit xml as system-out. This should help to debug if needed.
+        print(records_indices)
+        self.assertTrue("green" in records_indices)
+
     def test_indice_fleet_agents_7_exists(self):
         index_name = '.fleet-agents-7'
         ## Let's wait a bit until the indices are ready
