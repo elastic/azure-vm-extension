@@ -24,7 +24,7 @@ import groovy.transform.Field
 @Field def vms = [:]
 
 pipeline {
-  agent { label 'ubuntu-20' }
+  agent none
   environment {
     REPO = "azure-vm-extension"
     NOTIFY_TO = credentials('notify-to')
@@ -32,8 +32,6 @@ pipeline {
     LANG = "C.UTF-8"
     LC_ALL = "C.UTF-8"
     ELASTIC_STACK_VERSION = '7.13.1'
-    HOME = "${env.WORKSPACE}"
-    PATH = "${env.HOME}/bin:${env.PATH}"
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
@@ -48,72 +46,91 @@ pipeline {
     booleanParam(name: 'skipDestroy', defaultValue: "false", description: "Whether to skip the destroy of the cluster and terraform.")
   }
   stages {
-    stage('Checkout'){
+    stage('ITs') {
       options { skipDefaultCheckout() }
-      steps {
-        deleteDir()
-        checkout scm
-      }
-    }
-    stage('Create cluster'){
-      options { skipDefaultCheckout() }
-      steps {
-        withGithubNotify(context: "Create Cluster ${ELASTIC_STACK_VERSION}") {
-          withVaultEnv(){
-            sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+      failFast false
+      matrix {
+        agent { label 'ubuntu-20' }
+        axes {
+          axis {
+            name 'OS_VERSION'
+            values 'ubuntu-18', 'windows-2016', 'redhat-8'
           }
         }
-      }
-      post {
-        failure {
-          destroyCluster()
+        environment {
+          HOME = "${env.WORKSPACE}"
+          PATH = "${env.HOME}/bin:${env.PATH}"
         }
-      }
-    }
-    stage('Prepare tools') {
-      options { skipDefaultCheckout() }
-      steps {
-        withCloudEnv() {
-          sh(label: 'Prepare tools', script: 'make -C .ci prepare')
-        }
-      }
-      post {
-        failure {
-          destroyCluster()
-        }
-      }
-    }
-    stage('Terraform') {
-      options { skipDefaultCheckout() }
-      steps {
-        withGithubNotify(context: "Terraform ${ELASTIC_STACK_VERSION}") {
-          withCloudEnv() {
-            withAzEnv() {
-              sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+        stages {
+          stage('Checkout'){
+            options { skipDefaultCheckout() }
+            steps {
+              deleteDir()
+              checkout scm
             }
           }
-        }
-      }
-      post {
-        failure {
-          destroyTerraform()
-          destroyCluster()
-        }
-      }
-    }
-    stage('Validate') {
-      options { skipDefaultCheckout() }
-      steps {
-        withGithubNotify(context: "Validate ${ELASTIC_STACK_VERSION}") {
-          withValidationEnv() {
-            sh(label: 'Validate', script: 'make -C .ci validate')
+          stage('Create cluster'){
+            options { skipDefaultCheckout() }
+            steps {
+              withGithubNotify(context: "Create Cluster ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
+                withVaultEnv(){
+                  sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
+                }
+              }
+            }
+            post {
+              failure {
+                destroyCluster()
+              }
+            }
           }
-        }
-      }
-      post {
-        always {
-          destroyTerraform()
-          destroyCluster()
+          stage('Prepare tools') {
+            options { skipDefaultCheckout() }
+            steps {
+              withCloudEnv() {
+                sh(label: 'Prepare tools', script: 'make -C .ci prepare')
+              }
+            }
+            post {
+              failure {
+                destroyCluster()
+              }
+            }
+          }
+          stage('Terraform') {
+            options { skipDefaultCheckout() }
+            steps {
+              withGithubNotify(context: "Terraform ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
+                withCloudEnv() {
+                  withAzEnv() {
+                    sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+                  }
+                }
+              }
+            }
+            post {
+              failure {
+                destroyTerraform()
+                destroyCluster()
+              }
+            }
+          }
+          stage('Validate') {
+            options { skipDefaultCheckout() }
+            steps {
+              withGithubNotify(context: "Validate ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
+                withValidationEnv() {
+                  sh(label: 'Validate', script: 'make -C .ci validate')
+                }
+              }
+            }
+            post {
+              always {
+                destroyTerraform()
+                destroyCluster()
+              }
+            }
+          }
         }
       }
     }
@@ -196,15 +213,22 @@ def withAzEnv(Closure body) {
 }
 
 def withMatrixEnv(Closure body) {
-  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}"
+  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}-${env.OS_VERSION}"
   def vmName = getCachedVmNameOrAssignVmName(clusterName)
+  def vms = readYaml(file: ".ci/virtual-machines.yml")
+  def os = vms.find { it.name == env.OS_VERSION }
   withEnv([
     "CLUSTER_NAME=${clusterName}",
     'TF_VAR_prefix=tst-' + vmName.take(6),
     "TF_VAR_vmName=${vmName}",
+    "TF_VAR_isWindows=${isWindows()}",
+    "TF_VAR_sku=${os.sku}",
+    "TF_VAR_publisher=${os.publisher}",
+    "TF_VAR_offer=${os.offer}",
     "VM_NAME=${vmName}"
   ]) {
-    echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix}"
+    echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix} - TF_VAR_isWindows=${TF_VAR_isWindows}"
+    echo "TF_VAR_sku=${TF_VAR_sku} - TF_VAR_publisher=${TF_VAR_publisher} - TF_VAR_offer=${TF_VAR_offer}"
     body()
   }
 }
@@ -217,4 +241,8 @@ def getCachedVmNameOrAssignVmName(String key) {
     vms[key] = vmName
     return vmName
   }
+}
+
+def isWindows() {
+  return env.OS_VERSION?.toLowerCase()?.contains('windows')
 }

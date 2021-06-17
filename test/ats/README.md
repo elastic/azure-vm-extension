@@ -11,5 +11,5 @@ This is the folder that contains the Acceptance Tests to validate the Elastic Ag
 
 1. Run the below script in your terminal to test the given VM in the given cloud environment.
 ```bash
-$ validate.sh <ES_USERNAME> <ES_PASSWORD> <ES_URL> <VM_NAME>
+$ validate.sh <ES_USERNAME> <ES_PASSWORD> <ES_URL> <VM_NAME> <IS_WINDOWS>
 ```
