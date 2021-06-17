@@ -17,11 +17,13 @@ class TestIndices(unittest.TestCase):
     isWindows = True
 
     def countEnrolment(self, index_name, hostname, compareWith):
-        tries = 0
+        tries = 1
+        total = 20
         count = 0
         while count < compareWith:
-            if tries > 20:
+            if tries > total:
                 break
+            print("countEnrolment: {} out of {}".format(tries, total))
             records_count = self.es.count(index=index_name,body={
                             "query": {
                                 "bool": {
@@ -52,6 +54,8 @@ class TestIndices(unittest.TestCase):
                         }
                     )
             count = records_count['count']
+            if count >= compareWith:
+                break
             tries += 1
             time.sleep(5)
             continue
@@ -60,13 +64,17 @@ class TestIndices(unittest.TestCase):
         return count
 
     def count(self, index_name, hostname, compareWith):
-        tries = 0
+        tries = 1
+        total = 20
         count = 0
         while count < compareWith:
-            if tries > 20:
+            if tries > total:
                 break
+            print("count: {} out of {}".format(tries, total))
             records_count = self.es.count(index=index_name, body={"query": {"match": {"agent.hostname": hostname}}})
             count = records_count['count']
+            if count >= compareWith:
+                break
             tries += 1
             time.sleep(5)
             continue
@@ -76,14 +84,18 @@ class TestIndices(unittest.TestCase):
         return count
 
     def exists(self, index_name):
-        tries = 0
+        tries = 1
+        total = 10
         exist = False
         while not exist:
-            if tries > 10:
+            if tries > total:
                 break
+            print("exists: {} out of {}".format(tries, total))
             ## Deprecated to access system indices
             ## https://github.com/elastic/elasticsearch/issues/50251
             exist = self.es.indices.exists(index_name)
+            if exist:
+                break
             tries += 1
             time.sleep(5)
             continue
