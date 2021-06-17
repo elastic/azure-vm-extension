@@ -226,7 +226,7 @@ def withMatrixEnv(Closure body) {
   def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${stackVersion}-${env.OS_VERSION}"
   def vmName = getCachedVmNameOrAssignVmName(clusterName)
   def vms = readYaml(file: ".ci/virtual-machines.yml")
-  def os = vms[env.OS_VERSION]
+  def os = vms.find { it.name == env.OS_VERSION }
   withEnv([
     "CLUSTER_NAME=${clusterName}",
     'TF_VAR_prefix=tst-' + vmName.take(6),
