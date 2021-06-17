@@ -1,0 +1,32 @@
+---
+## This is the file that contains what azure images are supported
+##
+## The data structure:
+##  name: the image id name used in the pipelines
+##  publisher: the VM publisher
+##  publisher: the VM offer
+##  publisher: the VM sku
+##
+
+# az vm image list --publisher RedHat --all --offer RHEL
+- name: redhat-8
+  publisher: RedHat
+  offer: RHEL
+  sku: "8.2"
+
+# az vm image list --publisher Canonical --all --offer UbuntuServer
+- name: ubuntu-18
+  publisher: Canonical
+  offer: UbuntuServer
+  sku: 18.04-LTS
+
+# az vm image list --publisher MicrosoftWindowsServer --all --offer WindowsServer
+- name: windows-2016
+  publisher: MicrosoftWindowsServer
+  offer: WindowsServer
+  sku: 2016-Datacenter
+
+- name: windows-2012
+  publisher: MicrosoftWindowsServer
+  offer: WindowsServer
+  sku: 2012-Datacenter

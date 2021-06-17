@@ -62,6 +62,10 @@ pipeline {
             // .ci/bump-stack-release-version.sh
             values '8.0.0-SNAPSHOT', '7.x', '7.13.2'
           }
+          axis {
+            name 'OS_VERSION'
+            values 'ubuntu-18', 'windows-2016', 'windows-2012', 'redhat-8'
+          }
         }
         environment {
           HOME = "${env.WORKSPACE}"
@@ -77,7 +81,7 @@ pipeline {
           stage('Create cluster'){
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Create Cluster ${STACK_VERSION}") {
+              withGithubNotify(context: "Create Cluster ${STACK_VERSION} ${OS_VERSION}") {
                 withVaultEnv(){
                   sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
                 }
@@ -105,7 +109,7 @@ pipeline {
           stage('Terraform') {
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Terraform ${STACK_VERSION}") {
+              withGithubNotify(context: "Terraform ${STACK_VERSION} ${OS_VERSION}") {
                 withCloudEnv() {
                   withAzEnv() {
                     sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
@@ -123,7 +127,7 @@ pipeline {
           stage('Validate') {
             options { skipDefaultCheckout() }
             steps {
-              withGithubNotify(context: "Validate ${STACK_VERSION}") {
+              withGithubNotify(context: "Validate ${STACK_VERSION} ${OS_VERSION}") {
                 withValidationEnv() {
                   sh(label: 'Validate', script: 'make -C .ci validate')
                 }
@@ -220,16 +224,23 @@ def withAzEnv(Closure body) {
 
 def withMatrixEnv(Closure body) {
   def stackVersion = (env.STACK_VERSION == '7.x') ? artifactsApi(action: '7.x-version') : env.STACK_VERSION
-  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${stackVersion}"
+  def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${stackVersion}-${env.OS_VERSION}"
   def vmName = getCachedVmNameOrAssignVmName(clusterName)
+  def vms = readYaml(file: ".ci/virtual-machines.yml")
+  def os = vms.find { it.name == env.OS_VERSION }
   withEnv([
     "CLUSTER_NAME=${clusterName}",
     'TF_VAR_prefix=tst-' + vmName.take(6),
     "TF_VAR_vmName=${vmName}",
+    "TF_VAR_isWindows=${isWindows()}",
+    "TF_VAR_sku=${os.sku}",
+    "TF_VAR_publisher=${os.publisher}",
+    "TF_VAR_offer=${os.offer}",
     "VM_NAME=${vmName}",
     "ELASTIC_STACK_VERSION=${stackVersion}"
   ]) {
-    echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix}"
+    echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix} - TF_VAR_isWindows=${TF_VAR_isWindows}"
+    echo "TF_VAR_sku=${TF_VAR_sku} - TF_VAR_publisher=${TF_VAR_publisher} - TF_VAR_offer=${TF_VAR_offer}"
     body()
   }
 }
@@ -242,4 +253,8 @@ def getCachedVmNameOrAssignVmName(String key) {
     vms[key] = vmName
     return vmName
   }
+}
+
+def isWindows() {
+  return env.OS_VERSION?.toLowerCase()?.contains('windows')
 }

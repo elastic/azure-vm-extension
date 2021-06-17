@@ -17,5 +17,6 @@ $ ES_USERNAME=<ES_USERNAME> \
   ES_PASSWORD=<ES_PASSWORD> \
   ES_URL=<ES_URL> \
   VM_NAME=<VM_NAME> \
+  TF_VAR_isWindows=<TF_VAR_isWindows> \
   python -m xmlrunner validate.py
 ```

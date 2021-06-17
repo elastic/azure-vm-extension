@@ -48,3 +48,27 @@ variable "vmName" {
     error_message = "Maximum length of vmName is 15 characters."
   }
 }
+
+variable "isWindows" {
+  description = "If true, resources will be a Windows"
+  type        = bool
+  default     = true
+}
+
+variable "publisher" {
+  description = "The publisher for source_image_reference"
+  type        = string
+  default     = "MicrosoftWindowsServer"
+}
+
+variable "offer" {
+  description = "The offer for source_image_reference"
+  type        = string
+  default     = "WindowsServer"
+}
+
+variable "sku" {
+  description = "The sku for source_image_reference"
+  type        = string
+  default     = "2016-Datacenter"
+}
