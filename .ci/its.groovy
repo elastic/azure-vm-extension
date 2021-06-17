@@ -239,6 +239,7 @@ def withMatrixEnv(Closure body) {
     "ELASTIC_STACK_VERSION=${stackVersion}"
   ]) {
     echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix} - TF_VAR_isWindows=${TF_VAR_isWindows}"
+    echo "TF_VAR_sku=${TF_VAR_sku} - TF_VAR_publisher=${TF_VAR_publisher} - TF_VAR_offer=${TF_VAR_offer}"
     body()
   }
 }
