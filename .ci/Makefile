@@ -30,6 +30,18 @@ ifndef TF_VAR_prefix
 	@echo "Please set TF_VAR_prefix in the environment to generate the extension"
 	exit 1
 endif
+ifndef TF_VAR_sku
+	@echo "Please set TF_VAR_sku in the environment to generate the VM"
+	exit 1
+endif
+ifndef TF_VAR_publisher
+	@echo "Please set TF_VAR_publisher in the environment to generate the VM"
+	exit 1
+endif
+ifndef TF_VAR_offer
+	@echo "Please set TF_VAR_offer in the environment to generate the VM"
+	exit 1
+endif
 ifndef TF_VAR_vmName
 	@echo "Please set TF_VAR_vmName in the environment to generate the extension"
 	exit 1
@@ -63,6 +75,9 @@ endif
 		--env TF_VAR_prefix="$(TF_VAR_prefix)" \
 		--env TF_VAR_vmName="$(TF_VAR_vmName)" \
 		--env TF_VAR_isWindows="$(TF_VAR_isWindows)" \
+		--env TF_VAR_sku="$(TF_VAR_sku)" \
+		--env TF_VAR_publisher="$(TF_VAR_publisher)" \
+		--env TF_VAR_offer="$(TF_VAR_offer)" \
 		--env AZ_USERNAME="$(AZ_USERNAME)" \
 		--env AZ_PASSWORD="$(AZ_PASSWORD)" \
 		--env AZ_TENANT="$(AZ_TENANT)" \

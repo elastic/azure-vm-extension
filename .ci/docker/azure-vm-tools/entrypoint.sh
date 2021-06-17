@@ -34,6 +34,9 @@ if [ "${TYPE}" == "run" ] ; then
 	TF_VAR_prefix="${TF_VAR_prefix}" \
 	TF_VAR_vmName="${TF_VAR_vmName}" \
 	TF_VAR_isWindows="${TF_VAR_isWindows}" \
+	TF_VAR_sku="${TF_VAR_sku}" \
+	TF_VAR_publisher="${TF_VAR_publisher}" \
+	TF_VAR_offer="${TF_VAR_offer}" \
 	terraform apply -auto-approve
 fi
 
@@ -45,5 +48,8 @@ if [ "${TYPE}" == "destroy" ] ; then
 	TF_VAR_prefix="${TF_VAR_prefix}" \
 	TF_VAR_vmName="${TF_VAR_vmName}" \
 	TF_VAR_isWindows="${TF_VAR_isWindows}" \
+	TF_VAR_sku="${TF_VAR_sku}" \
+	TF_VAR_publisher="${TF_VAR_publisher}" \
+	TF_VAR_offer="${TF_VAR_offer}" \
 	terraform destroy -auto-approve
 fi

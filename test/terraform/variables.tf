@@ -54,3 +54,21 @@ variable "isWindows" {
   type        = bool
   default     = true
 }
+
+variable "publisher" {
+  description = "The publisher for source_image_reference"
+  type        = string
+  default     = "MicrosoftWindowsServer"
+}
+
+variable "offer" {
+  description = "The offer for source_image_reference"
+  type        = string
+  default     = "WindowsServer"
+}
+
+variable "sku" {
+  description = "The sku for source_image_reference"
+  type        = string
+  default     = "2016-Datacenter"
+}

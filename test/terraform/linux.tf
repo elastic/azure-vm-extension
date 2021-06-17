@@ -14,9 +14,9 @@ resource "azurerm_linux_virtual_machine" "main" {
   ]
 
   source_image_reference {
-    publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "18.04-LTS"
+    publisher = var.publisher
+    offer     = var.offer
+    sku       = var.sku
     version   = "latest"
   }
 

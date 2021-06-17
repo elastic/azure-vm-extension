@@ -64,7 +64,7 @@ pipeline {
           }
           axis {
             name 'OS_VERSION'
-            values 'linux', 'windows'
+            values 'ubuntu-18', 'windows-2016'
           }
         }
         environment {
@@ -225,11 +225,16 @@ def withMatrixEnv(Closure body) {
   def stackVersion = (env.STACK_VERSION == '7.x') ? artifactsApi(action: '7.x-version') : env.STACK_VERSION
   def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${stackVersion}-${env.OS_VERSION}"
   def vmName = getCachedVmNameOrAssignVmName(clusterName)
+  def vms = readYaml(file: ".ci/virtual-machines.yml")
+  def os = vms[env.OS_VERSION]
   withEnv([
     "CLUSTER_NAME=${clusterName}",
     'TF_VAR_prefix=tst-' + vmName.take(6),
     "TF_VAR_vmName=${vmName}",
     "TF_VAR_isWindows=${isWindows()}",
+    "TF_VAR_sku=${os.sku}",
+    "TF_VAR_publisher=${os.publisher}",
+    "TF_VAR_offer=${os.offer}",
     "VM_NAME=${vmName}",
     "ELASTIC_STACK_VERSION=${stackVersion}"
   ]) {
@@ -249,5 +254,5 @@ def getCachedVmNameOrAssignVmName(String key) {
 }
 
 def isWindows() {
-  return env.OS_VERSION?.toLowerCase()?.equals('windows')
+  return env.OS_VERSION?.toLowerCase()?.contains('windows')
 }
