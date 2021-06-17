@@ -64,7 +64,7 @@ pipeline {
           }
           axis {
             name 'OS_VERSION'
-            values 'ubuntu-18', 'windows-2016'
+            values 'ubuntu-18', 'windows-2016', 'windows-2012', 'redhat-8'
           }
         }
         environment {
