@@ -1,8 +1,10 @@
+from typing import Counter
 import unittest
 import xmlrunner
 from elasticsearch import Elasticsearch
 from waiting import wait
 import os
+import time
 
 class TestIndices(unittest.TestCase):
 
@@ -16,45 +18,70 @@ class TestIndices(unittest.TestCase):
     isWindows = True
 
     def countEnrolment(self, index_name, hostname):
-        return self.es.count(index=index_name,body={
-            "query": {
-                "bool": {
-                    "filter": [
-                        {
-                            "match_all": {}
-                        },
-                        {
-                            "match_phrase": {
-                                "local_metadata.host.hostname": hostname
+        records_count = self.es.count(index=index_name,body={
+                                "query": {
+                                    "bool": {
+                                        "filter": [
+                                            {
+                                                "match_all": {}
+                                            },
+                                            {
+                                                "match_phrase": {
+                                                    "local_metadata.host.hostname": hostname
+                                                }
+                                            },
+                                            {
+                                                "match_phrase": {
+                                                    "active": True
+                                                }
+                                            }
+                                        ],
+                                        "must_not": [
+                                            {
+                                                "match_phrase": {
+                                                    "policy_id": "policy-elastic-agent-on-cloud"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
                             }
-                        },
-                        {
-                            "match_phrase": {
-                                "active": True
-                            }
-                        }
-                    ],
-                    "must_not": [
-                        {
-                            "match_phrase": {
-                                "policy_id": "policy-elastic-agent-on-cloud"
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-    )
-
-    def count(self, index_name, hostname):
-        return self.es.count(index=index_name, body={"query": {"match": {"agent.hostname": hostname}}})
-
-    def countAndTest(self, index_name, hostname, compare):
-        records_count = self.count(index_name, hostname)
-        count = records_count['count']
+                        )
         ## Print will be shown in the junit xml as system-out. This should help to debug if needed.
         print(records_count)
-        self.assertTrue(count >= compare, "Expected at least one entry in index {}, got {}".format(index_name, count))
+        return records_count['count']
+
+    def count(self, index_name, hostname):
+        records_count = self.es.count(index=index_name, body={"query": {"match": {"agent.hostname": hostname}}})
+        ## Print will be shown in the junit xml as system-out. This should help to debug if needed.
+        print(records_count)
+        return records_count['count']
+
+    def waitForCount(self, index_name, hostname, compare):
+        count = 0
+        while count < compare:
+            count = self.count(index_name, hostname)
+            time.sleep(5)
+        return count >= compare
+
+    def waitForCountEnrolment(self, index_name, hostname, compare):
+        count = 0
+        while count < compare:
+            count = self.countEnrolment(index_name, hostname)
+            time.sleep(5)
+        return count >= compare
+
+    def waitForIndexExist(self, index_name):
+        exist = False
+        while not self.es.indices.exists(index_name):
+            time.sleep(5)
+        return True
+
+    def countAndTest(self, index_name, hostname, compare):
+        ## Let's wait a bit until the indices are ready
+        wait(lambda: self.waitForCount(index_name, self.hostname, compare), timeout_seconds=30, waiting_for="Index to be ready")
+        records_count = self.count(index_name, hostname)
+        self.assertTrue(records_count >= compare, "Expected at least one entry in index {}, got {}".format(index_name, records_count))
 
     def test_green_indices(self):
         records_indices = self.es.cat.indices()
@@ -65,7 +92,7 @@ class TestIndices(unittest.TestCase):
     def test_indice_fleet_agents_7_exists(self):
         index_name = '.fleet-agents-7'
         ## Let's wait a bit until the indices are ready
-        wait(lambda: self.es.indices.exists(index_name), timeout_seconds=120, waiting_for="Index to be ready")
+        wait(lambda: self.waitForIndexExist(index_name), timeout_seconds=120, waiting_for="Index to be ready")
 
         ## Deprecated to access system indices
         ## https://github.com/elastic/elasticsearch/issues/50251
@@ -73,14 +100,12 @@ class TestIndices(unittest.TestCase):
 
     def test_enrolment(self):
         index_name = '.fleet-agents-7'
+        compare = 1
         ## Let's wait a bit until the indices are ready
-        wait(lambda: self.countEnrolment(index_name, self.hostname), timeout_seconds=120, waiting_for="Index to be ready")
+        wait(lambda: self.waitForCountEnrolment(index_name, self.hostname, compare), timeout_seconds=120, waiting_for="Index to be ready")
 
         records_count = self.countEnrolment(index_name, self.hostname)
-        count = records_count['count']
-        ## Print will be shown in the junit xml as system-out. This should help to debug if needed.
-        print(records_count)
-        self.assertTrue(count >= 1, "Expected at least one entry in index {}, got {}".format(index_name, count))
+        self.assertTrue(records_count >= compare, "Expected at least one entry in index {}, got {}".format(index_name, records_count))
 
     def test_indice_ds_metrics_memory(self):
         self.countAndTest('.ds-metrics-system.memory-default-*', self.hostname, 1)
