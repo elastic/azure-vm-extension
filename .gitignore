@@ -13,3 +13,6 @@ terraform.tfstate*
 .azure
 
 *.bck
+test/ats/TEST-*.xml
+.local
+.cache

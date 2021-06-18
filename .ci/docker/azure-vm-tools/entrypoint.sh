@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
+## Run ITs in python
+if [ "${TYPE}" == "test" ] ; then
+    cd test/ats
+    python -m xmlrunner validate.py || exit 1
+    exit 0
+fi
+
 echo "What azure version?"
 az version
 
