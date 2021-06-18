@@ -113,7 +113,7 @@ class TestIndices(unittest.TestCase):
     def test_indice_fleet_agents_7_exists(self):
         self.assertTrue(self.exists('.fleet-agents-7'), "Expected .fleet-agents-7 index")
 
-    def test_enrolment(self):
+    def test_enrollment(self):
         index_name = '.fleet-agents-7'
         compare_with = 1
         records_count = self.count_enrollment(index_name, self.hostname, compare_with)
