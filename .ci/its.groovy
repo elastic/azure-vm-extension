@@ -87,22 +87,12 @@ pipeline {
                 }
               }
             }
-            post {
-              failure {
-                destroyCluster()
-              }
-            }
           }
           stage('Prepare tools') {
             options { skipDefaultCheckout() }
             steps {
               withCloudEnv() {
                 sh(label: 'Prepare tools', script: 'make -C .ci prepare')
-              }
-            }
-            post {
-              failure {
-                destroyCluster()
               }
             }
           }
@@ -115,12 +105,6 @@ pipeline {
                     sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
                   }
                 }
-              }
-            }
-            post {
-              failure {
-                destroyTerraform()
-                destroyCluster()
               }
             }
           }
@@ -136,9 +120,13 @@ pipeline {
             post {
               always {
                 destroyTerraform()
-                destroyCluster()
               }
             }
+          }
+        }
+        post {
+          always {
+            destroyCluster()
           }
         }
       }
