@@ -13,16 +13,16 @@ class TestIndices(unittest.TestCase):
     )
 
     hostname = os.environ.get('VM_NAME')
-    isWindows = "true" in os.getenv('TF_VAR_isWindows', 'true').lower()
+    is_windows = "true" in os.getenv('TF_VAR_isWindows', 'true').lower()
 
-    def countEnrolment(self, index_name, hostname, compareWith):
+    def count_enrollment(self, index_name, hostname, compare_with):
         tries = 1
         total = 20
         count = 0
-        while count < compareWith:
+        while count < compare_with:
             if tries > total:
                 break
-            print("countEnrolment: {} out of {}".format(tries, total))
+            print("count_enrollment: {} out of {}".format(tries, total))
             records_count = self.es.count(index=index_name,body={
                             "query": {
                                 "bool": {
@@ -53,7 +53,7 @@ class TestIndices(unittest.TestCase):
                         }
                     )
             count = records_count['count']
-            if count >= compareWith:
+            if count >= compare_with:
                 break
             tries += 1
             time.sleep(5)
@@ -62,17 +62,17 @@ class TestIndices(unittest.TestCase):
         print(records_count)
         return count
 
-    def count(self, index_name, hostname, compareWith):
+    def count(self, index_name, hostname, compare_with):
         tries = 1
         total = 20
         count = 0
-        while count < compareWith:
+        while count < compare_with:
             if tries > total:
                 break
             print("count: {} out of {}".format(tries, total))
             records_count = self.es.count(index=index_name, body={"query": {"match": {"agent.hostname": hostname}}})
             count = records_count['count']
-            if count >= compareWith:
+            if count >= compare_with:
                 break
             tries += 1
             time.sleep(5)
@@ -100,9 +100,9 @@ class TestIndices(unittest.TestCase):
             continue
         return exist
 
-    def countAndTest(self, index_name, hostname, compareWith):
-        records_count = self.count(index_name, hostname, compareWith)
-        self.assertTrue(records_count >= compareWith, "Expected at least one entry in index {}, got {}".format(index_name, records_count))
+    def count_and_test(self, index_name, hostname, compare_with):
+        records_count = self.count(index_name, hostname, compare_with)
+        self.assertTrue(records_count >= compare_with, "Expected at least one entry in index {}, got {}".format(index_name, records_count))
 
     def test_green_indices(self):
         records_indices = self.es.cat.indices()
@@ -115,26 +115,26 @@ class TestIndices(unittest.TestCase):
 
     def test_enrolment(self):
         index_name = '.fleet-agents-7'
-        compareWith = 1
-        records_count = self.countEnrolment(index_name, self.hostname, compareWith)
-        self.assertTrue(records_count >= compareWith, "Expected at least one entry in index {}, got {}".format(index_name, records_count))
+        compare_with = 1
+        records_count = self.count_enrollment(index_name, self.hostname, compare_with)
+        self.assertTrue(records_count >= compare_with, "Expected at least one entry in index {}, got {}".format(index_name, records_count))
 
     def test_indice_ds_metrics_memory(self):
-        self.countAndTest('.ds-metrics-system.memory-default-*', self.hostname, 1)
+        self.count_and_test('.ds-metrics-system.memory-default-*', self.hostname, 1)
 
     def test_indice_ds_metrics_cpu(self):
-        self.countAndTest('.ds-metrics-system.cpu-default-*', self.hostname, 1)
+        self.count_and_test('.ds-metrics-system.cpu-default-*', self.hostname, 1)
 
     def test_indice_ds_metrics_diskio(self):
-        self.countAndTest('.ds-metrics-system.diskio-default-*', self.hostname, 1)
+        self.count_and_test('.ds-metrics-system.diskio-default-*', self.hostname, 1)
 
     def test_indice_ds_logs_windows_diskio(self):
-        if self.isWindows:
-            self.countAndTest('.ds-logs-system.application-default-*', self.hostname, 1)
+        if self.is_windows:
+            self.count_and_test('.ds-logs-system.application-default-*', self.hostname, 1)
 
     def test_indice_ds_logs_linux_diskio(self):
-        if not self.isWindows:
-            self.countAndTest('.ds-logs-system.syslog-default-*', self.hostname, 1)
+        if not self.is_windows:
+            self.count_and_test('.ds-logs-system.syslog-default-*', self.hostname, 1)
 
 if __name__ == '__main__':
     unittest.main(testRunner=xmlrunner.XMLTestRunner(output='test-reports'))
