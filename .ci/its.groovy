@@ -167,14 +167,15 @@ def failedStage(String name) {
 
 def slackStageStatus() {
   def message = "*ITs*: ${env.REPO}"
-  if (stageStatus.isEmpty()) {
+  if (failedStages.isEmpty()) {
     return "*ITs*: ${env.REPO}"
   } else {
     def message = "*ITs failed*:"
-    stageStatus.each { k, v ->
+    failedStages.each { k, v ->
       def data = k?.split('|')
       message += "\n- Stage: ${data[0]} (${data[1]} - ${data[2]})"
     }
+    echo "slackStageStatus: ${message}"
     return message
   }
 }
