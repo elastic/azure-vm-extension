@@ -77,11 +77,11 @@ pipeline {
                   sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
                 }
               }
-              echo "DEBUG status in stage - ${curentBuild.result}"
+              echo "DEBUG status in stage - ${currentBuild.result}"
             }
             post {
               failure {
-                echo "DEBUG status in post-failure-stage - ${curentBuild.result}"
+                echo "DEBUG status in post-failure-stage - ${currentBuild.result}"
                 destroyCluster()
               }
             }
@@ -92,11 +92,11 @@ pipeline {
               withCloudEnv() {
                 sh(label: 'Prepare tools', script: 'make -C .ci prepare')
               }
-              echo "DEBUG status in stage - ${curentBuild.result}"
+              echo "DEBUG status in stage - ${currentBuild.result}"
             }
             post {
               failure {
-                echo "DEBUG status in post-failure-stage - ${curentBuild.result}"
+                echo "DEBUG status in post-failure-stage - ${currentBuild.result}"
                 destroyCluster()
               }
             }
@@ -111,11 +111,11 @@ pipeline {
                   }
                 }
               }
-              echo "DEBUG status in stage - ${curentBuild.result}"
+              echo "DEBUG status in stage - ${currentBuild.result}"
             }
             post {
               failure {
-                echo "DEBUG status in post-failure-stage - ${curentBuild.result}"
+                echo "DEBUG status in post-failure-stage - ${currentBuild.result}"
                 destroyTerraform()
                 destroyCluster()
               }
@@ -129,11 +129,11 @@ pipeline {
                   sh(label: 'Validate', script: 'make -C .ci validate')
                 }
               }
-              echo "DEBUG status in stage - ${curentBuild.result}"
+              echo "DEBUG status in stage - ${currentBuild.result}"
             }
             post {
               always {
-                echo "DEBUG status in post-failure-stage - ${curentBuild.result}"
+                echo "DEBUG status in post-failure-stage - ${currentBuild.result}"
                 junit(allowEmptyResults: true, keepLongStdio: true, testResults: 'test/ats/TEST-*.xml')
                 destroyTerraform()
                 destroyCluster()
