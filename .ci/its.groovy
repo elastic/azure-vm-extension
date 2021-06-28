@@ -23,6 +23,9 @@ import groovy.transform.Field
 // key is the cluster name and value is the VM name
 @Field def vms = [:]
 
+// Failed stages to notify in the slack message
+@Field def failedStages = [:]
+
 pipeline {
   agent none
   environment {
@@ -89,6 +92,7 @@ pipeline {
             }
             post {
               failure {
+                failedStage("cluster creation|${STACK_VERSION}|${OS_VERSION}")
                 destroyCluster()
               }
             }
@@ -102,6 +106,7 @@ pipeline {
             }
             post {
               failure {
+                failedStage("prepare tools|${STACK_VERSION}|${OS_VERSION}")
                 destroyCluster()
               }
             }
@@ -119,6 +124,7 @@ pipeline {
             }
             post {
               failure {
+                failedStage("terraform run|${STACK_VERSION}|${OS_VERSION}")
                 destroyTerraform()
                 destroyCluster()
               }
@@ -134,6 +140,9 @@ pipeline {
               }
             }
             post {
+              failure {
+                failedStage("ITs|${STACK_VERSION}|${OS_VERSION}")
+              }
               always {
                 junit(allowEmptyResults: true, keepLongStdio: true, testResults: 'test/ats/TEST-*.xml')
                 destroyTerraform()
@@ -147,8 +156,26 @@ pipeline {
   }
   post {
     cleanup {
-      notifyBuildResult(prComment: true, slackHeader: "*ITs*: ${env.REPO}", slackChannel: "${env.SLACK_CHANNEL}", slackComment: true, slackNotify: (isBranch() || isTag()))
+      notifyBuildResult(prComment: true, slackHeader: "${slackStageStatus()}", slackChannel: "${env.SLACK_CHANNEL}", slackComment: true, slackNotify: (isBranch() || isTag()))
     }
+  }
+}
+
+def failedStage(String name) {
+  failedStages[name] = 'failed'
+}
+
+def slackStageStatus() {
+  def message = "*ITs*: ${env.REPO}"
+  if (stageStatus.isEmpty()) {
+    return "*ITs*: ${env.REPO}"
+  } else {
+    def message = "*ITs failed*:"
+    stageStatus.each { k, v ->
+      def data = k?.split('|')
+      message += "\n- Stage: ${data[0]} (${data[1]} - ${data[2]})"
+    }
+    return message
   }
 }
 
