@@ -178,7 +178,7 @@ pipeline {
   }
   post {
     cleanup {
-      notifyBuildResult(prComment: true, slackHeader: "${slackStageStatus()}", slackChannel: "${env.SLACK_CHANNEL}", slackComment: true, slackNotify: (isPR() || isBranch() || isTag()))
+      notifyBuildResult(prComment: true, slackHeader: "${slackStageStatus()}", slackChannel: "${env.SLACK_CHANNEL}", slackComment: true, slackNotify: true)
     }
   }
 }
