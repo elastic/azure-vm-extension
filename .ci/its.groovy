@@ -166,7 +166,7 @@ def failedStage(String name) {
 }
 
 def slackStageStatus() {
-  def message = "*ITs*: ${env.REPO}"
+  echo "slackStageStatus: started"
   if (failedStages.isEmpty()) {
     return "*ITs*: ${env.REPO}"
   } else {
