@@ -26,6 +26,10 @@ import groovy.transform.Field
 // Failed stages to notify in the slack message
 @Field def failedStages = [:]
 
+// Passed stages to workaround the matrix/post-build
+// See https://issues.jenkins.io/browse/JENKINS-65997
+@Field def successStages = [:]
+
 pipeline {
   agent none
   environment {
@@ -83,36 +87,51 @@ pipeline {
           }
           stage('Create cluster'){
             options { skipDefaultCheckout() }
+            environment {
+              STAGE_NAME = "Create cluster|${STACK_VERSION}|${OS_VERSION}"
+            }
             steps {
               withGithubNotify(context: "Create Cluster ${STACK_VERSION} ${OS_VERSION}") {
                 withVaultEnv(){
                   sh(label: 'Deploy Cluster', script: 'make -C .ci create-cluster')
                 }
               }
+              successStage(env.STAGE_NAME)
             }
             post {
               failure {
-                failedStage("cluster creation|${STACK_VERSION}|${OS_VERSION}")
-                destroyCluster()
+                failedStage(env.STAGE_NAME)
+                whenFalse(isSuccessStage(env.STAGE_NAME)) {
+                  destroyCluster()
+                }
               }
             }
           }
           stage('Prepare tools') {
             options { skipDefaultCheckout() }
+            environment {
+              STAGE_NAME = "Prepare tools|${STACK_VERSION}|${OS_VERSION}"
+            }
             steps {
               withCloudEnv() {
                 sh(label: 'Prepare tools', script: 'make -C .ci prepare')
               }
+              successStage(env.STAGE_NAME)
             }
             post {
               failure {
-                failedStage("prepare tools|${STACK_VERSION}|${OS_VERSION}")
-                destroyCluster()
+                failedStage(env.STAGE_NAME)
+                whenFalse(isSuccessStage(env.STAGE_NAME)) {
+                  destroyCluster()
+                }
               }
             }
           }
           stage('Terraform') {
             options { skipDefaultCheckout() }
+            environment {
+              STAGE_NAME = "Terraform|${STACK_VERSION}|${OS_VERSION}"
+            }
             steps {
               withGithubNotify(context: "Terraform ${STACK_VERSION} ${OS_VERSION}") {
                 withCloudEnv() {
@@ -121,12 +140,15 @@ pipeline {
                   }
                 }
               }
+              successStage(env.STAGE_NAME)
             }
             post {
               failure {
-                failedStage("terraform run|${STACK_VERSION}|${OS_VERSION}")
-                destroyTerraform()
-                destroyCluster()
+                failedStage(env.STAGE_NAME)
+                whenFalse(isSuccessStage(env.STAGE_NAME)) {
+                  destroyTerraform()
+                  destroyCluster()
+                }
               }
             }
           }
@@ -162,7 +184,7 @@ pipeline {
 }
 
 def failedStage(String name) {
-  failedStages[name] = 'failed'
+  failedStages[name] = true
 }
 
 def slackStageStatus() {
@@ -178,6 +200,14 @@ def slackStageStatus() {
     echo "slackStageStatus: ${message}"
     return message
   }
+}
+
+def successStage(String name) {
+  successStages[name] = true
+}
+
+def isSuccessStage(String name) {
+  return successStages.containsKey(name)
 }
 
 def destroyCluster( ) {
