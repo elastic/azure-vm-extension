@@ -194,7 +194,7 @@ def slackStageStatus() {
   } else {
     def message = "*ITs failed*:"
     failedStages.each { k, v ->
-      def data = k?.split('|')
+      def data = k?.split('\\|')
       message += "\n- Stage: ${data[0]} (${data[1]} - ${data[2]})"
     }
     echo "slackStageStatus: ${message}"
