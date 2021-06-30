@@ -192,7 +192,7 @@ def slackStageStatus() {
   if (failedStages.isEmpty()) {
     return "*ITs*: ${env.REPO}"
   } else {
-    def message = "*ITs failed*:"
+    def message = "*ITs failed*: "
     failedStages.each { k, v ->
       def data = k?.split('\\|')
       message += "\n- Stage: ${data[0]} (${data[1]} - ${data[2]})"
