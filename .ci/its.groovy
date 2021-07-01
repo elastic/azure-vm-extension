@@ -23,6 +23,9 @@ import groovy.transform.Field
 // key is the cluster name and value is the VM name
 @Field def vms = [:]
 
+// Failed stages to notify in the slack message
+@Field def failedStages = [:]
+
 // Passed stages to workaround the matrix/post-build
 // See https://issues.jenkins.io/browse/JENKINS-65997
 @Field def successStages = [:]
@@ -97,6 +100,7 @@ pipeline {
             }
             post {
               failure {
+                failedStage(env.STAGE_NAME)
                 whenFalse(isSuccessStage(env.STAGE_NAME)) {
                   destroyCluster()
                 }
@@ -116,6 +120,7 @@ pipeline {
             }
             post {
               failure {
+                failedStage(env.STAGE_NAME)
                 whenFalse(isSuccessStage(env.STAGE_NAME)) {
                   destroyCluster()
                 }
@@ -139,6 +144,7 @@ pipeline {
             }
             post {
               failure {
+                failedStage(env.STAGE_NAME)
                 whenFalse(isSuccessStage(env.STAGE_NAME)) {
                   destroyTerraform()
                   destroyCluster()
@@ -156,6 +162,9 @@ pipeline {
               }
             }
             post {
+              failure {
+                failedStage("ITs|${STACK_VERSION}|${OS_VERSION}")
+              }
               always {
                 junit(allowEmptyResults: true, keepLongStdio: true, testResults: 'test/ats/TEST-*.xml')
                 destroyTerraform()
@@ -169,8 +178,27 @@ pipeline {
   }
   post {
     cleanup {
-      notifyBuildResult(prComment: true, slackHeader: "*ITs*: ${env.REPO}", slackChannel: "${env.SLACK_CHANNEL}", slackComment: true, slackNotify: (isBranch() || isTag()))
+      notifyBuildResult(prComment: true, slackHeader: "${slackStageStatus()}", slackChannel: "${env.SLACK_CHANNEL}", slackComment: true, slackNotify: true)
     }
+  }
+}
+
+def failedStage(String name) {
+  failedStages[name] = true
+}
+
+def slackStageStatus() {
+  echo "slackStageStatus: started"
+  if (failedStages.isEmpty()) {
+    return "*ITs*: ${env.REPO}"
+  } else {
+    def message = "*ITs failed*: "
+    failedStages.each { k, v ->
+      def data = k?.split('\\|')
+      message += "\n- Stage: ${data[0]} (${data[1]} - ${data[2]})"
+    }
+    echo "slackStageStatus: ${message}"
+    return message
   }
 }
 
