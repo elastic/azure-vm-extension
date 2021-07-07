@@ -19,6 +19,7 @@ class TestIndices(unittest.TestCase):
         tries = 1
         total = 20
         count = 0
+        print("count_enrollment(index_name: {}, hostname: {})".format(index_name, hostname))
         while count < compare_with:
             if tries > total:
                 break
@@ -66,6 +67,7 @@ class TestIndices(unittest.TestCase):
         tries = 1
         total = 20
         count = 0
+        print("count(index_name: {}, hostname: {})".format(index_name, hostname))
         while count < compare_with:
             if tries > total:
                 break
@@ -86,6 +88,7 @@ class TestIndices(unittest.TestCase):
         tries = 1
         total = 10
         exist = False
+        print("exists(index_name: {}".format(index_name))
         while not exist:
             if tries > total:
                 break
