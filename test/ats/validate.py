@@ -88,7 +88,7 @@ class TestIndices(unittest.TestCase):
         tries = 1
         total = 10
         exist = False
-        print("exists(index_name: {}".format(index_name))
+        print("exists(index_name: {})".format(index_name))
         while not exist:
             if tries > total:
                 break
