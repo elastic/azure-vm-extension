@@ -236,7 +236,7 @@ def runTerraform(def args = [:]) {
   def enableExtension = args.get('enableExtension', true)
   withCloudEnv() {
     withAzEnv() {
-      withEnv(["TF_VAR_isExtension=${runTerraform}"]) {
+      withEnv(["TF_VAR_isExtension=${enableExtension}"]) {
         sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
       }
     }
