@@ -55,6 +55,12 @@ variable "isWindows" {
   default     = true
 }
 
+variable "isExtension" {
+  description = "If true, VM extension is enabled"
+  type        = bool
+  default     = true
+}
+
 variable "publisher" {
   description = "The publisher for source_image_reference"
   type        = string
@@ -71,4 +77,10 @@ variable "sku" {
   description = "The sku for source_image_reference"
   type        = string
   default     = "2016-Datacenter"
+}
+
+variable "debugFile" {
+  description = "The file with the debug traces"
+  type        = string
+  default     = "/tmp/file.log"
 }

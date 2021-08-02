@@ -134,11 +134,7 @@ pipeline {
             }
             steps {
               withGithubNotify(context: "Terraform ${STACK_VERSION} ${OS_VERSION}") {
-                withCloudEnv() {
-                  withAzEnv() {
-                    sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
-                  }
-                }
+                runTerraform(enableExtension: true)
               }
               successStage(env.STAGE_NAME)
             }
@@ -167,6 +163,7 @@ pipeline {
               }
               always {
                 junit(allowEmptyResults: true, keepLongStdio: true, testResults: 'test/ats/TEST-*.xml')
+                runTerraform(enableExtension: false)
                 destroyTerraform()
                 destroyCluster()
               }
@@ -228,6 +225,20 @@ def destroyTerraform( ) {
   withCloudEnv() {
     withAzEnv() {
       sh(label: 'Destroy terraform plan', script: 'make -C .ci terraform-destroy')
+    }
+  }
+}
+
+def runTerraform(def args = [:]) {
+  // This will help to enable the terraform VM azure extension.
+  // if disabled then it will help to rerun the terraform to print
+  // some debug output.
+  def enableExtension = args.get('enableExtension', true)
+  withCloudEnv() {
+    withAzEnv() {
+      withEnv(["TF_VAR_isExtension=${runTerraform}"]) {
+        sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
+      }
     }
   }
 }

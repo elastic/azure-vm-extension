@@ -24,11 +24,24 @@ resource "azurerm_linux_virtual_machine" "main" {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
   }
+
+  ## TODO: while no debug file are provided let's mock one
+  provisioner "file" {
+    content     = "I'm a file, let's debug it"
+    destination = var.debugFile
+  }
+
+  ## Cat the content for debugging purposes
+  provisioner "remote-exec" {
+    inline = [
+      "cat ${var.debugFile}"
+    ]
+  }
 }
 
 ## See https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension
 resource "azurerm_virtual_machine_extension" "linux" {
-  count                = var.isWindows ? 0 : 1
+  count                = (var.isWindows && var.isExtension) ? 0 : 1
   name                 = "ElasticAgent.linux"
   virtual_machine_id   = azurerm_linux_virtual_machine.main[count.index].id
   publisher            = "Elastic"
