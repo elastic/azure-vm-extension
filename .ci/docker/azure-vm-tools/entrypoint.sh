@@ -58,28 +58,27 @@ if [ "${TYPE}" == "debug" ] ; then
 	terraform output
 	RESOURCE_GROUP=$(jq -r '.outputs.resource_group_name.value' terraform.tfstate)
 
+	mkdir -p debug
 	if [ "${TF_VAR_isWindows}" == "false" ] ; then
-		az vm run-command invoke \
-			-g $RESOURCE_GROUP \
-			-n "${TF_VAR_vmName}" \
-			--command-id RunShellScript \
-			--scripts 'cat /var/log/waagent.log /var/log/azure/Elastic.ElasticAgent.linux/es-agent.log'
+		for file in "/var/log/waagent.log" "/var/log/azure/Elastic.ElasticAgent.linux/es-agent.log"
+		do
+			filename=$(basename $file)
+			az vm run-command invoke \
+				-g $RESOURCE_GROUP \
+				-n "${TF_VAR_vmName}" \
+				--command-id RunShellScript \
+				--scripts "cat ${file}" > debug/"$TF_VAR_vmName"-"$filename".log
+		done
 	else
-		az vm run-command invoke \
-			-g $RESOURCE_GROUP \
-			-n "${TF_VAR_vmName}" \
-			--command-id RunPowerShellScript \
-			--scripts 'get-content C:\WindowsAzure\Logs\WaAppAgent.log | Invoke-Expression'
-		az vm run-command invoke \
-			-g $RESOURCE_GROUP \
-			-n "${TF_VAR_vmName}" \
-			--command-id RunPowerShellScript \
-			--scripts 'get-content C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\es-agent.log | Invoke-Expression'
-		az vm run-command invoke \
-			-g $RESOURCE_GROUP \
-			-n "${TF_VAR_vmName}" \
-			--command-id RunPowerShellScript \
-			--scripts 'get-content C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\CommandExecution.log | Invoke-Expression'
+		for file in "C:\WindowsAzure\Logs\WaAppAgent.log" "C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\es-agent.log" "C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\CommandExecution.log"
+		do
+			filename=$(basename "$(echo $file | sed 's#\\#\/#g')")
+			az vm run-command invoke \
+				-g $RESOURCE_GROUP \
+				-n "${TF_VAR_vmName}" \
+				--command-id RunPowerShellScript \
+				--scripts "get-content | Invoke-Expression" > debug/"$TF_VAR_vmName"-"$filename".log
+		done
 	fi
 fi
 

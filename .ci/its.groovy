@@ -229,6 +229,7 @@ def terraform(Map args = [:]) {
   withCloudEnv() {
     withAzEnv() {
       sh(label: "Run ${args.goal}", script: "make -C .ci ${args.goal}", returnStatus: args.get('returnStatus', false))
+      archiveArtifacts allowEmptyArchive: true, artifacts: 'test/terraform/debug/*.log'
     }
   }
 }
