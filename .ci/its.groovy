@@ -134,7 +134,7 @@ pipeline {
             }
             steps {
               withGithubNotify(context: "Terraform ${STACK_VERSION} ${OS_VERSION}") {
-                terraform('terraform-run')
+                terraform(goal: 'terraform-run')
               }
               successStage(env.STAGE_NAME)
             }
@@ -163,7 +163,6 @@ pipeline {
               }
               always {
                 junit(allowEmptyResults: true, keepLongStdio: true, testResults: 'test/ats/TEST-*.xml')
-                terraform('terraform-debug')
                 destroyTerraform()
                 destroyCluster()
               }
@@ -208,6 +207,7 @@ def isSuccessStage(String name) {
 }
 
 def destroyCluster( ) {
+  terraform(goal: 'terraform-debug', returnStatus: true)
   if (params.skipDestroy) {
     echo 'Skipped the destroy cluster step'
     return
@@ -222,13 +222,13 @@ def destroyTerraform( ) {
     echo 'Skipped the destroy terraform step'
     return
   }
-  terraform('terraform-destroy')
+  terraform(goal: 'terraform-destroy', returnStatus: true)
 }
 
-def terraform(String goal) {
+def terraform(Map args = [:]) {
   withCloudEnv() {
     withAzEnv() {
-      sh(label: 'Run terraform plan', script: "make -C .ci ${goal}")
+      sh(label: 'Run terraform plan', script: "make -C .ci ${args.goal}", returnStatus: args.get('returnStatus', false))
     }
   }
 }
