@@ -32,3 +32,19 @@ resource "azurerm_network_interface" "main" {
     private_ip_address_allocation = "Dynamic"
   }
 }
+
+resource "azurerm_storage_account" "main" {
+  count                    = (var.isExtension) ? 0 : 1
+  name                     = "azvmext"
+  resource_group_name      = azurerm_resource_group.main.name
+  location                 = azurerm_resource_group.main.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "main" {
+  count                 = (var.isExtension) ? 0 : 1
+  name                  = format("%s-%s", var.prefix, var.name)
+  storage_account_name  = azurerm_storage_account.main[count.index].name
+  container_access_type = "private"
+}
