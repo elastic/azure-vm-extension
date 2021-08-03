@@ -228,7 +228,7 @@ def destroyTerraform( ) {
 def terraform(Map args = [:]) {
   withCloudEnv() {
     withAzEnv() {
-      sh(label: 'Run terraform plan', script: "make -C .ci ${args.goal}", returnStatus: args.get('returnStatus', false))
+      sh(label: "Run ${args.goal}", script: "make -C .ci ${args.goal}", returnStatus: args.get('returnStatus', false))
     }
   }
 }
