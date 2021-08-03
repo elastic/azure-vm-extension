@@ -63,10 +63,23 @@ if [ "${TYPE}" == "debug" ] ; then
 			-g $RESOURCE_GROUP \
 			-n "${TF_VAR_vmName}" \
 			--command-id RunShellScript \
-			--scripts 'echo $1 $2' \
-			--parameters hello world
+			--scripts 'cat /var/log/waagent.log /var/log/azure/Elastic.ElasticAgent.linux/es-agent.log'
 	else
-		echo 'TBD'
+		az vm run-command invoke \
+			-g $RESOURCE_GROUP \
+			-n "${TF_VAR_vmName}" \
+			--command-id RunPowerShellScript \
+			--scripts 'get-content C:\WindowsAzure\Logs\WaAppAgent.log | Invoke-Expression'
+		az vm run-command invoke \
+			-g $RESOURCE_GROUP \
+			-n "${TF_VAR_vmName}" \
+			--command-id RunPowerShellScript \
+			--scripts 'get-content C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\es-agent.log | Invoke-Expression'
+		az vm run-command invoke \
+			-g $RESOURCE_GROUP \
+			-n "${TF_VAR_vmName}" \
+			--command-id RunPowerShellScript \
+			--scripts 'get-content C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\CommandExecution.log | Invoke-Expression'
 	fi
 fi
 
