@@ -51,7 +51,8 @@ class TestIndices(unittest.TestCase):
                                     ]
                                 }
                             }
-                        }
+                        },
+                        ignore=503
                     )
             count = records_count['count']
             if count >= compare_with:
@@ -72,7 +73,7 @@ class TestIndices(unittest.TestCase):
             if tries > total:
                 break
             print("count: {} out of {}".format(tries, total))
-            records_count = self.es.count(index=index_name, body={"query": {"match": {"agent.hostname": hostname}}})
+            records_count = self.es.count(index=index_name, body={"query": {"match": {"agent.hostname": hostname}}}, ignore=503)
             count = records_count['count']
             if count >= compare_with:
                 break
@@ -95,7 +96,7 @@ class TestIndices(unittest.TestCase):
             print("exists: {} out of {}".format(tries, total))
             ## Deprecated to access system indices
             ## https://github.com/elastic/elasticsearch/issues/50251
-            exist = self.es.indices.exists(index_name)
+            exist = self.es.indices.exists(index_name, ignore=503)
             if exist:
                 break
             tries += 1
