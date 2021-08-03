@@ -87,6 +87,9 @@ endif
 		-u $(CURRENT_UID):$(CURRENT_GID) \
 		$(DOCKER_IMAGE)
 
+
+terraform-debug:  ## Debug the terraform plan
+
 terraform-destroy:  ## Destroy the terraform plan
 
 terraform-run:  ## Run the terraform plan

@@ -55,12 +55,6 @@ variable "isWindows" {
   default     = true
 }
 
-variable "isExtension" {
-  description = "If true, VM extension is enabled"
-  type        = bool
-  default     = true
-}
-
 variable "publisher" {
   description = "The publisher for source_image_reference"
   type        = string

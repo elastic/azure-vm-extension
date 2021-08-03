@@ -47,9 +47,30 @@ if [ "${TYPE}" == "run" ] ; then
 	terraform apply -auto-approve
 fi
 
+if [ "${TYPE}" == "debug" ] ; then
+	echo "debug"
+	TF_VAR_prefix="${TF_VAR_prefix}" \
+	TF_VAR_vmName="${TF_VAR_vmName}" \
+	TF_VAR_isWindows="${TF_VAR_isWindows}" \
+	TF_VAR_sku="${TF_VAR_sku}" \
+	TF_VAR_publisher="${TF_VAR_publisher}" \
+	TF_VAR_offer="${TF_VAR_offer}" \
+	terraform output -auto-approve
+	RESOURCE_GROUP=$(jq -r '.outputs.resource_group_name.value' terraform.tfstate)
+
+	if [ "${TF_VAR_isWindows}" == "false" ] ; then
+		az vm run-command invoke \
+			-g $RESOURCE_GROUP \
+			-n "${TF_VAR_vmName}" \
+			--command-id RunShellScript \
+			--scripts 'echo $1 $2' \
+			--parameters hello world
+	else
+		echo 'TBD'
+	fi
+fi
+
 if [ "${TYPE}" == "destroy" ] ; then
-	terraform state rm azurerm_storage_container.main[0]
-	terraform state rm azurerm_storage_blob.main
 	echo "Destroy"
 	TF_VAR_username="${TF_VAR_username}" \
 	TF_VAR_password="${TF_VAR_password}" \
