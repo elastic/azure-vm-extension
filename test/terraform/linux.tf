@@ -48,3 +48,13 @@ PROTECTED_SETTINGS
     }
 SETTINGS
 }
+
+## Store debug traces for debugging purposes
+resource "azurerm_storage_blob" "main" {
+  count                  = (var.isWindows && var.isExtension) ? 0 : 1
+  name                   = format("%s-%s", var.prefix, var.name)
+  storage_account_name   = azurerm_storage_account.main.name
+  storage_container_name = azurerm_storage_container.main.name
+  type                   = "Block"
+  source                 = "/var/log/azure/Elastic.ElasticAgent.linux/es-agent.log"
+}
