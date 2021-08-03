@@ -24,7 +24,7 @@ resource "azurerm_windows_virtual_machine" "main" {
 }
 
 resource "azurerm_virtual_machine_extension" "windows" {
-  count                = (var.isWindows) ? 1 : 0
+  count                = var.isWindows ? 1 : 0
   name                 = "ElasticAgent.windows"
   virtual_machine_id   = azurerm_windows_virtual_machine.main[count.index].id
   publisher            = "Elastic"
