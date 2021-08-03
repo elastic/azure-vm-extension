@@ -24,19 +24,6 @@ resource "azurerm_linux_virtual_machine" "main" {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
   }
-
-  ## TODO: while no debug file are provided let's mock one
-  provisioner "file" {
-    content     = "I'm a file, let's debug it"
-    destination = var.debugFile
-  }
-
-  ## Cat the content for debugging purposes
-  provisioner "remote-exec" {
-    inline = [
-      "cat ${var.debugFile}"
-    ]
-  }
 }
 
 ## See https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension
@@ -60,4 +47,14 @@ PROTECTED_SETTINGS
         "cloudId": "${var.cloudId}"
     }
 SETTINGS
+}
+
+## Store debug traces for debugging purposes
+resource "azurerm_storage_blob" "main" {
+  count                  = (var.isWindows && var.isExtension) ? 0 : 1
+  name                   = format("%s-%s", var.prefix, var.name)
+  storage_account_name   = azurerm_storage_account.main.name
+  storage_container_name = azurerm_storage_container.main.name
+  type                   = "Block"
+  source                 = "/var/log/azure/Elastic.ElasticAgent.linux/es-agent.log"
 }

@@ -48,6 +48,8 @@ if [ "${TYPE}" == "run" ] ; then
 fi
 
 if [ "${TYPE}" == "destroy" ] ; then
+	terraform state rm azurerm_storage_container
+	terraform state rm azurerm_storage_blob
 	echo "Destroy"
 	TF_VAR_username="${TF_VAR_username}" \
 	TF_VAR_password="${TF_VAR_password}" \

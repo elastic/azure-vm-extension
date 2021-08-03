@@ -78,9 +78,3 @@ variable "sku" {
   type        = string
   default     = "2016-Datacenter"
 }
-
-variable "debugFile" {
-  description = "The file with the debug traces"
-  type        = string
-  default     = "/tmp/file.log"
-}
