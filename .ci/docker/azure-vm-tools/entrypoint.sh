@@ -55,7 +55,7 @@ if [ "${TYPE}" == "debug" ] ; then
 	TF_VAR_sku="${TF_VAR_sku}" \
 	TF_VAR_publisher="${TF_VAR_publisher}" \
 	TF_VAR_offer="${TF_VAR_offer}" \
-	terraform output -auto-approve
+	terraform output
 	RESOURCE_GROUP=$(jq -r '.outputs.resource_group_name.value' terraform.tfstate)
 
 	if [ "${TF_VAR_isWindows}" == "false" ] ; then
