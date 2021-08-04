@@ -47,6 +47,47 @@ if [ "${TYPE}" == "run" ] ; then
 	terraform apply -auto-approve
 fi
 
+if [ "${TYPE}" == "debug" ] ; then
+	echo "debug"
+	TF_VAR_prefix="${TF_VAR_prefix}" \
+	TF_VAR_vmName="${TF_VAR_vmName}" \
+	TF_VAR_isWindows="${TF_VAR_isWindows}" \
+	TF_VAR_sku="${TF_VAR_sku}" \
+	TF_VAR_publisher="${TF_VAR_publisher}" \
+	TF_VAR_offer="${TF_VAR_offer}" \
+	terraform output
+	RESOURCE_GROUP=$(jq -r '.outputs.resource_group_name.value' terraform.tfstate)
+
+	mkdir -p debug
+	if [ "${TF_VAR_isWindows}" == "false" ] ; then
+		for file in "/var/log/waagent.log" "/var/log/azure/Elastic.ElasticAgent.linux/es-agent.log"
+		do
+			filename=$(basename $file)
+			az vm run-command invoke \
+				-g "$RESOURCE_GROUP" \
+				-n "${TF_VAR_vmName}" \
+				--command-id RunShellScript \
+				--scripts "cat ${file}" > debug/"$TF_VAR_vmName"-"$filename".log || true
+		done
+	else
+		az vm run-command invoke \
+				-g "$RESOURCE_GROUP" \
+				-n "${TF_VAR_vmName}" \
+				--command-id RunPowerShellScript \
+				--scripts "get-content C:\WindowsAzure\Logs\WaAppAgent.log" > debug/"$TF_VAR_vmName"-WaAppAgent.log || true
+		az vm run-command invoke \
+				-g "$RESOURCE_GROUP" \
+				-n "${TF_VAR_vmName}" \
+				--command-id RunPowerShellScript \
+				--scripts "Get-ChildItem -Path C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\*\CommandExecution.log | get-content" > debug/"$TF_VAR_vmName"-CommandExecution.log || true
+		az vm run-command invoke \
+				-g "$RESOURCE_GROUP" \
+				-n "${TF_VAR_vmName}" \
+				--command-id RunPowerShellScript \
+				--scripts "Get-ChildItem -Path C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\*\es-agent.log | get-content" > debug/"$TF_VAR_vmName"-es-agent.log || true
+	fi
+fi
+
 if [ "${TYPE}" == "destroy" ] ; then
 	echo "Destroy"
 	TF_VAR_username="${TF_VAR_username}" \

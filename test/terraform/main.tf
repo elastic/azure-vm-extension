@@ -32,3 +32,9 @@ resource "azurerm_network_interface" "main" {
     private_ip_address_allocation = "Dynamic"
   }
 }
+
+output "resource_group_name" {
+  value = azurerm_resource_group.main.name
+  description = "The resource group name."
+  sensitive = true
+}

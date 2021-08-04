@@ -134,11 +134,7 @@ pipeline {
             }
             steps {
               withGithubNotify(context: "Terraform ${STACK_VERSION} ${OS_VERSION}") {
-                withCloudEnv() {
-                  withAzEnv() {
-                    sh(label: 'Run terraform plan', script: 'make -C .ci terraform-run')
-                  }
-                }
+                terraform(goal: 'terraform-run')
               }
               successStage(env.STAGE_NAME)
             }
@@ -211,6 +207,7 @@ def isSuccessStage(String name) {
 }
 
 def destroyCluster( ) {
+  terraform(goal: 'terraform-debug', returnStatus: true)
   if (params.skipDestroy) {
     echo 'Skipped the destroy cluster step'
     return
@@ -225,9 +222,14 @@ def destroyTerraform( ) {
     echo 'Skipped the destroy terraform step'
     return
   }
+  terraform(goal: 'terraform-destroy', returnStatus: true)
+}
+
+def terraform(Map args = [:]) {
   withCloudEnv() {
     withAzEnv() {
-      sh(label: 'Destroy terraform plan', script: 'make -C .ci terraform-destroy')
+      sh(label: "Run ${args.goal}", script: "make -C .ci ${args.goal}", returnStatus: args.get('returnStatus', false))
+      archiveArtifacts allowEmptyArchive: true, artifacts: 'test/terraform/debug/*.log'
     }
   }
 }
