@@ -54,9 +54,10 @@ class TestIndices(unittest.TestCase):
                         },
                         ignore=503
                     )
-            count = records_count['count']
-            if count >= compare_with:
-                break
+            if "count" in records_count:
+                count = records_count['count']
+                if count >= compare_with:
+                    break
             tries += 1
             time.sleep(5)
             continue
@@ -74,9 +75,10 @@ class TestIndices(unittest.TestCase):
                 break
             print("count: {} out of {}".format(tries, total))
             records_count = self.es.count(index=index_name, body={"query": {"match": {"agent.hostname": hostname}}}, ignore=503)
-            count = records_count['count']
-            if count >= compare_with:
-                break
+            if "count" in records_count:
+                count = records_count['count']
+                if count >= compare_with:
+                    break
             tries += 1
             time.sleep(5)
             continue
