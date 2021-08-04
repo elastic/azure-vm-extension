@@ -67,7 +67,7 @@ if [ "${TYPE}" == "debug" ] ; then
 				-g $RESOURCE_GROUP \
 				-n "${TF_VAR_vmName}" \
 				--command-id RunShellScript \
-				--scripts "cat ${file}" > debug/"$TF_VAR_vmName"-"$filename".log
+				--scripts "cat ${file}" > debug/"$TF_VAR_vmName"-"$filename".log || true
 		done
 	else
 		for file in "C:\WindowsAzure\Logs\WaAppAgent.log" "C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\es-agent.log" "C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\CommandExecution.log"
@@ -77,7 +77,7 @@ if [ "${TYPE}" == "debug" ] ; then
 				-g $RESOURCE_GROUP \
 				-n "${TF_VAR_vmName}" \
 				--command-id RunPowerShellScript \
-				--scripts "get-content | Invoke-Expression" > debug/"$TF_VAR_vmName"-"$filename".log
+				--scripts "get-content | Invoke-Expression" > debug/"$TF_VAR_vmName"-"$filename".log || true
 		done
 	fi
 fi
