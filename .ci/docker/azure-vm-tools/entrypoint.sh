@@ -64,20 +64,28 @@ if [ "${TYPE}" == "debug" ] ; then
 		do
 			filename=$(basename $file)
 			az vm run-command invoke \
-				-g $RESOURCE_GROUP \
+				-g "$RESOURCE_GROUP" \
 				-n "${TF_VAR_vmName}" \
 				--command-id RunShellScript \
 				--scripts "cat ${file}" > debug/"$TF_VAR_vmName"-"$filename".log || true
 		done
 	else
-		for file in "C:\WindowsAzure\Logs\WaAppAgent.log" "C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\es-agent.log" "C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\1.1.1.0\CommandExecution.log"
+		for filename in "es-agent.log" "CommandExecution.log"
+		do
+			az vm run-command invoke \
+				-g "$RESOURCE_GROUP" \
+				-n "${TF_VAR_vmName}" \
+				--command-id RunPowerShellScript \
+				--scripts "Get-ChildItem -Path C:\WindowsAzure\Logs\Plugins\Elastic.ElasticAgent.windows\*\\$filename.txt | get-content" > debug/"$TF_VAR_vmName"-"$filename".log || true
+		done
+		for file in "C:\WindowsAzure\Logs\WaAppAgent.log"
 		do
 			filename=$(basename "$(echo $file | sed 's#\\#\/#g')")
 			az vm run-command invoke \
-				-g $RESOURCE_GROUP \
+				-g "$RESOURCE_GROUP" \
 				-n "${TF_VAR_vmName}" \
 				--command-id RunPowerShellScript \
-				--scripts "get-content | Invoke-Expression" > debug/"$TF_VAR_vmName"-"$filename".log || true
+				--scripts "get-content $file" > debug/"$TF_VAR_vmName"-"$filename".log || true
 		done
 	fi
 fi
