@@ -46,6 +46,9 @@ pipeline {
     timeout(time: 2, unit: 'HOURS')
     disableConcurrentBuilds()
   }
+  triggers {
+    issueCommentTrigger("${obltGitHubComments()}")
+  }
   parameters {
     booleanParam(name: 'skipDestroy', defaultValue: "false", description: "Whether to skip the destroy of the cluster and terraform.")
   }
