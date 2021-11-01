@@ -1,4 +1,7 @@
-# Elastic Agent VM extension
+# Elastic Agent VM extensions
+
+ElasticAgent.windows for Windows systems
+ElasticAgent.linux for Linux systems
 
 The ElasticAgent VM extensions are small applications that provides post-deployment configuration and automation on Azure VMs.
 Once installed, the ElasticAgent VM extension will download the elastic agent artifacts, install the elastic agent on the virtual machine, enroll it to Fleet and then start the agent service.
@@ -36,12 +39,12 @@ For Windows Azure VM's users will need to install the ElasticAgent.windows VM ex
 
 Example installation from CLI:
 ```
- az vm extension set -n ElasticAgent.windows --publisher Elastic --version 1.0.0.0 --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'
+ az vm extension set -n ElasticAgent.windows --publisher Elastic --version {version number} --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'
 ```
 
 For Linux based VM's users will need to install the ElasticAgent.linux VM extension.
 
 Example installation from CLI:
 ```
- az vm extension set -n ElasticAgent.linux --publisher Elastic --version 1.0.0.0 --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'
+ az vm extension set -n ElasticAgent.linux --publisher Elastic --version {version number} --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'
 ```
