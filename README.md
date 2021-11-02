@@ -3,8 +3,8 @@
 ElasticAgent.windows for Windows systems
 ElasticAgent.linux for Linux systems
 
-The ElasticAgent VM extensions are small applications that provides post-deployment configuration and automation on Azure VMs.
-Once installed, the ElasticAgent VM extension will download the elastic agent artifacts, install the elastic agent on the virtual machine, enroll it to Fleet and then start the agent service.
+The ElasticAgent VM extensions are small applications that provide post-deployment configuration and automation on Azure VMs.
+Once installed, the ElasticAgent VM extension will download the Elastic Agent artifacts, install the Elastic Agent on the virtual machine, enroll it to Fleet and then start the agent service.
 
 
 ## Platforms supported

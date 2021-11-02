@@ -1,7 +1,7 @@
 Azure VM extensions are lightweight applications that handle post-deployment configuration and automation tasks on Azure VMs. Azure hosts many extensions for e.g. VM configuration, monitoring, security, and utility applications. Publishers take an application, then wrap it into an extension, and simplify the installation, so all users need to do is provide mandatory parameters
 
 The main source code is structured in 2 parts:
-- handler - contains the windows/linux related scripts that need to install needed dependencies on the vm, download the elastic agent install it and enroll it to Fleet
+- handler - contains the windows/linux related scripts that need to install needed dependencies on the vm, download the Elastic Agent install it and enroll it to Fleet
 - packages - contains the UI and miscellaneous installation scripts 
 
 ## Handler
@@ -10,9 +10,9 @@ The handler implements the Windows Azure Agent defined protocol to integrate wit
 
 Handler requirements:
 
-1. Handler Packaging – The Handler should be packaged as a zip file. This zip package should contain all the binaries related to the handler and HandlerManifest. This package needs to be registered with the Azure image repository. Azure image repository is responsible for managing all versions of all the handlers that are registered with the Azure ecosystem.
+1. Handler Packaging – The handler should be packaged as a zip file. This zip package should contain all the binaries related to the handler and HandlerManifest. This package needs to be registered with the Azure image repository. Azure image repository is responsible for managing all versions of all the handlers that are registered with the Azure ecosystem.
 
-2. Handler Environment - Handler needs the capability to read the environment file in the format that Azure Agent defines. The environment file defines the locations of various files and folders that the handler needs to use for reading configuration and writing back heartbeat and status.
+2. Handler Environment - The handler needs the capability to read the environment file in the format that Azure Agent defines. The environment file defines the locations of various files and folders that the handler needs to use for reading configuration and writing back heartbeat and status.
 
 3. Handler Configuration – Various extension packs that the handler needs to manage are passed to the handler in form of configuration settings. For example if a script is needed by the handler to install an extension, that script is passed to it via the handler configuration file. The handler should have the ability to read this file in the format defined by the Azure Agent and should be able to execute its contents and report the status of that execution with a frequency that complies with the Azure Agent protocol.
 
@@ -21,7 +21,7 @@ Handler requirements:
 
 ### Handler Package
 
-This is the package that contains the handler binary files and all standard static configuration files. Is is registered with the azure ecosystem and will contain the binaries and the HandlerManifest.json file that is used by the Azure Agent to manage the handler.
+This is the package that contains the handler binary files and all standard static configuration files. It is registered with the azure ecosystem and will contain the binaries and the HandlerManifest.json file that is used by the Azure Agent to manage the handler.
  Since we are supporting both Windows and Linux os’s `handler` directory is divided into `windows` and `linux` handler packages for each os version.
 Ex. HandlerManifest.json
 
@@ -45,27 +45,27 @@ Elastic Agent Handler Package structure
 Binaries will be composed of .cmd, .ps1 and .sh files.
 
 Install command:
-- should download and install the necessary dependencies for the elastic agent to be installed.
+- should download and install the necessary dependencies for the Elastic Agent to be installed.
 
 Enable command:
-- will parse the Ellasticsearch and Kibana urls fromt he cloud ID
+- will parse the Elasticsearch and Kibana urls from the cloud ID
 - will ping the ES cluster to retrieve the stack version
-- will download the elastic agent with the selected stack version
-- will install the elastic agent, enroll it to Fleet and start it
+- will download the Elastic Agent with the selected stack version
+- will install the Elastic Agent, enroll it to Fleet and start it
 
 Will also handled cases like update configuration or start vm
 
 Disable command:
- - Should only stop the service (cmd documented in elastic agent docs)
+ - Should only stop the service (cmd documented in Elastic Agent docs)
 
 Uninstall command:
-- Should uninstall the service. For deb and rpm, additional effort is made in order to unenroll the agent (api call), stop the agent and remove the elastic agent folders
+- Should uninstall the service. For deb and rpm, additional effort is made in order to unenroll the agent (api call), stop the agent and remove the Elastic Agent folders
 
 Update command:
-- Should re-install a new instance of elastic agent
+- Should re-install a new instance of Elastic Agent
 
 
-###Handler Environment
+### Handler Environment
  This is the set of files and folders that the Azure Agent sets up for the handlers to use at runtime. These files can be used for communicating with the Azure Agent (heartbeat and status) or for writing debugging information (logging). 
 
 Ex:
@@ -90,7 +90,7 @@ Ex:
 `rolename` -  this is the role name of the vm. This may change when a VM is captured/backed up and restored. 
 `instance` - this is the instance name of the vm (can be same as role name)
 
-###Handler Configuration
+### Handler Configuration
 This is a configuration file that contains various settings needed to configure this handler at runtime. Extension configuration is the input provided by the end user based on the schema provided by the handler publisher during registration.
 The location where the configuration setting files will be written can be retrieved by the “configFolder” property in the HandlerEnvironment.json file.
 
