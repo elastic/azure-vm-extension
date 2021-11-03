@@ -251,20 +251,14 @@ def withAzEnv(Closure body) {
 def withMatrixEnv(Closure body) {
   def clusterName = "tst-az-${BUILD_ID}-${BRANCH_NAME}-${ELASTIC_STACK_VERSION}-${env.OS_VERSION}"
   def vmName = getCachedVmNameOrAssignVmName(clusterName)
-  def vms = readYaml(file: ".ci/virtual-machines.yml")
-  def os = vms.find { it.name == env.OS_VERSION }
   withEnv([
     "CLUSTER_NAME=${clusterName}",
     'TF_VAR_prefix=tst-' + vmName.take(6),
     "TF_VAR_vmName=${vmName}",
     "TF_VAR_isWindows=${isWindows()}",
-    "TF_VAR_sku=${os.sku}",
-    "TF_VAR_publisher=${os.publisher}",
-    "TF_VAR_offer=${os.offer}",
     "VM_NAME=${vmName}"
   ]) {
     echo "CLUSTER_NAME=${CLUSTER_NAME} - VM_NAME=${VM_NAME} - TF_VAR_prefix=${TF_VAR_prefix} - TF_VAR_isWindows=${TF_VAR_isWindows}"
-    echo "TF_VAR_sku=${TF_VAR_sku} - TF_VAR_publisher=${TF_VAR_publisher} - TF_VAR_offer=${TF_VAR_offer}"
     body()
   }
 }
