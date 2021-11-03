@@ -24,13 +24,13 @@ prepare-pr-context:  ## Prepare the files needed to be run within the VM context
 
 .PHONY: prepare-pr-install
 prepare-pr-install:  ## Prepare the install steps for the PR.
-	@echo "Run install.sh"
-	@echo "Run enable.sh"
+	$(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/install.sh
+	$(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/enable.sh
 
 .PHONY: prepare-pr-uninstall
-prepare-pr-instuninstallall:  ## Prepare the uninstall steps for the PR.
-	@echo "Run disable.sh"
-	@echo "Run uninstall.sh"
+prepare-pr-uninstall:  ## Prepare the uninstall steps for the PR.
+	$(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/disable.sh
+	$(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/uninstall.sh
 
 .PHONY: prepare
 prepare:  ## Prepare the dependencies to run the tools
