@@ -1,0 +1,14 @@
+[
+  {
+    "handlerEnvironment":{
+      "heartbeatFile":"/var/lib/waagent/Elastic.ElasticAgent.linux-1/heartbeat.log",
+      "logFolder":"/var/log/azure/Elastic.ElasticAgent.linux",
+      "configFolder":"/var/lib/waagent/Elastic.ElasticAgent.linux-1/config",
+      "eventsFolder":"/var/log/azure/Elastic.ElasticAgent.linux/events",
+      "statusFolder":"/var/lib/waagent/Elastic.ElasticAgent.linux-1/status",
+      "eventsFolder_preview":"/var/log/azure/Elastic.ElasticAgent.linux/events"
+    },
+    "version":1.0,
+    "name":"Elastic.ElasticAgent.linux"
+  }
+]

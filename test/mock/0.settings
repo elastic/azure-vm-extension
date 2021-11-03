@@ -1,0 +1,14 @@
+{
+  "runtimeSettings":[
+    {
+      "handlerSettings":{
+        "protectedSettings":"....",
+        "publicSettings":{
+          "cloudId":"CLOUD_ID",
+          "username":"USERNAME"
+        },
+        "protectedSettingsCertThumbprint":"cert"
+      }
+    }
+  ]
+}

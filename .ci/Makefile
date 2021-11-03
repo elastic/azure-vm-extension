@@ -3,6 +3,8 @@ SHELL=/bin/bash -o pipefail
 CURRENT_UID := $(shell id -u)
 CURRENT_GID := $(shell id -g)
 DOCKER_IMAGE=docker.elastic.co/observability-ci/azure-vm-tools
+LINUX_WAAGENT_PATH=/var/lib/waagent
+LINUX_FOLDER_NAME=Elastic.ElasticAgent.linux-1
 
 .PHONY: help
 .DEFAULT_GOAL := help
@@ -11,7 +13,14 @@ help: ## Display this help text
 
 .PHONY: prepare-pr-context
 prepare-pr-context:  ## Prepare the files needed to be run within the VM context.
-	@echo "Copy src/handler/linux"
+	@mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config
+	@mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/status
+	@cp ../src/handler/linux/* $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
+	@chmod 700 $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/*.sh
+	@cp ../test/mock/HandlerEnvironment.json $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
+	@cp ../test/mock/0.settings $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config/
+	@cp ../test/mock/cert* $(LINUX_WAAGENT_PATH)/
+	@echo 'add settings to the 0.settings'
 
 .PHONY: prepare-pr-install
 prepare-pr-install:  ## Prepare the install steps for the PR.
