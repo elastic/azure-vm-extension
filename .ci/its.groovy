@@ -153,7 +153,7 @@ pipeline {
             steps {
               withGithubNotify(context: "Validate ${STACK_VERSION} ${OS_VERSION}") {
                 withValidationEnv() {
-                  sh(label: 'Validate', script: 'make -C .ci validate')
+                  sh(label: 'Validate install', script: 'make -C .ci validate-install')
                 }
               }
             }

@@ -9,6 +9,20 @@ DOCKER_IMAGE=docker.elastic.co/observability-ci/azure-vm-tools
 help: ## Display this help text
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
+.PHONY: prepare-pr-context
+prepare-pr-context:  ## Prepare the files needed to be run within the VM context.
+	@echo "Copy src/handler/linux"
+
+.PHONY: prepare-pr-install
+prepare-pr-install:  ## Prepare the install steps for the PR.
+	@echo "Run install.sh"
+	@echo "Run enable.sh"
+
+.PHONY: prepare-pr-uninstall
+prepare-pr-instuninstallall:  ## Prepare the uninstall steps for the PR.
+	@echo "Run disable.sh"
+	@echo "Run uninstall.sh"
+
 .PHONY: prepare
 prepare:  ## Prepare the dependencies to run the tools
 	@docker build --tag $(DOCKER_IMAGE) -f docker/azure-vm-tools/Dockerfile .
@@ -94,7 +108,7 @@ terraform-destroy:  ## Destroy the terraform plan
 
 terraform-run:  ## Run the terraform plan
 
-validate:  ## Validate the VM extension
+validate-%:  ## Validate the VM extension action
 ifndef ES_USERNAME
 	@echo "Please set ES_USERNAME in the environment to test the extension"
 	exit 1
@@ -123,7 +137,7 @@ endif
 		--env ES_URL="$(ES_URL)" \
 		--env VM_NAME="$(VM_NAME)" \
 		--env TF_VAR_isWindows="$(TF_VAR_isWindows)" \
-		--env TYPE=test \
+		--env TYPE=$* \
 		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
 		$(DOCKER_IMAGE)

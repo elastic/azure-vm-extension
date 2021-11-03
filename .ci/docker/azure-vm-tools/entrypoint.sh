@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-## Run ITs in python
-if [ "${TYPE}" == "test" ] ; then
+## Run ITs in python for the install
+if [ "${TYPE}" == "test-install" ] ; then
     cd test/ats
     python -m xmlrunner validate.py || exit 1
+    exit 0
+fi
+
+## Run ITs in python for the uninstall
+if [ "${TYPE}" == "test-uninstall" ] ; then
+    cd test/ats
+    python -m xmlrunner validate-uninstall.py || exit 1
     exit 0
 fi
 
