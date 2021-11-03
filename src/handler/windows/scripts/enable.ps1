@@ -5,12 +5,14 @@ $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 $ScriptDirectory = Split-Path $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDirectory newconfig.ps1)
 
-# for status enable
+# enable script will be run at enable time, will download artifacts, install elastic agent, enroll it to Fleet. Also, handles update configuration only.
+
+# var enabling status
 $nameE = "Enable elastic agent"
 $operationE = "starting elastic agent"
 $messageE = "Enable elastic agent"
 
-# for status install
+# var for install status
 $name = "Install elastic agent"
 $firstOperation = "installing elastic agent"
 $secondOperation = "enrolling elastic agent"
@@ -20,6 +22,7 @@ $subName = "Elastic Agent"
 
 $serviceName = 'elastic agent'
 
+# Install-ElasticAgent function gets es version, downloads correspondent es agent, enrolls it and starts the agent
 function Install-ElasticAgent {
     $installLocation ="C:\Program Files"
     $retries = 3
@@ -37,7 +40,7 @@ function Install-ElasticAgent {
             $savedFile="$env:temp\" + $package
             Write-Log "Starting download of elastic agent package with version $stackVersion" "INFO"
             DownloadFile -Params @{'Package'="$package";'OutFile'="$savedFile"}
-            # write status
+            # write wm extension status
             Write-Status "$name" "$firstOperation" "transitioning" "$message" "$subName" "success" "Elastic Agent package has been downloaded"
             Write-Log "Unzip elastic agent archive" "INFO"
             if ( $powershellVersion -le 4 ) {
@@ -67,7 +70,6 @@ function Install-ElasticAgent {
             Write-Log "Found Kibana url $kibanaUrl" "INFO"
             $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
             $headers.Add("kbn-xsrf", "true")
-            #cred
             $encodedCredentials = ""
             if ($password) {
                 $username = Get-Username $powershellVersion
@@ -168,6 +170,7 @@ function Install-ElasticAgent {
     }
 }
 
+# Enable-ElasticAgent function starts the es agent and logs status
 function Enable-ElasticAgent {
     $retries = 3
     $retryCount = 0
@@ -198,6 +201,7 @@ function Enable-ElasticAgent {
     }
 }
 
+# Reconfigure-ElasticAgent function uninstalls the current es agent and reinstall a new elastic agent based on the new configuration settings
 function Reconfigure-ElasticAgent {
     $retries = 3
     $retryCount = 0
@@ -230,7 +234,7 @@ function Reconfigure-ElasticAgent {
     }
 }
 
-
+# check if es agent service exists, check if new configuration was entered else install es agent
 If (Get-Service $serviceName -ErrorAction SilentlyContinue) {
     If (Is-New-Config) {
         Write-Log "New configuration file has been added. The elastic agent will reinstall" "INFO"

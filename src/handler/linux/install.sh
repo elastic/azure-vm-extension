@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# install script ran at the installation time, check on distros the extension supports and installs required packages for the elastic agent to run
+
+# log will log any exceptions in the install process
 log()
 {
   echo \[$(date +%H:%M:%ST%d-%m-%Y)\]  "$1" "$2"
@@ -13,6 +16,7 @@ fi
 DISTRO_NAME=""
 DISTRO_VERSION=""
 
+# get_distro will return distro name and version
 get_distro() {
 if [ -f /etc/os-release ]; then
     # freedesktop.org and systemd
@@ -44,6 +48,7 @@ else
 fi
 }
 
+# install_dependencies will install jq, wget packages if missing
 install_dependencies() {
   get_distro
   distro=${DISTRO_NAME,,}

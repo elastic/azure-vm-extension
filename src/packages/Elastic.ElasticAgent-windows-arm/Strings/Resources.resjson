@@ -1,0 +1,7 @@
+{
+  "displayName": "Elastic Agent for Windows",
+  "publisherDisplayName": "Elastic N.V.",
+  "summary": "Elastic Agent for Windows is a lightweight data shipper that collects system logs and metrics from your virtual machines and stores them in Elasticsearch.",
+  "description": "To configure the agent you’ll need to set your Elastic Cloud ID along with your Elasticsearch Service user credentials. Don’t have an account? Sign up to Elastic Cloud if you are a new user. Elastic Agent lets you get started with monitoring your infrastructure health in seconds: collect logs, metrics and APM data in once place. Out of the box integrations for more than 50 applications, such as MSSQL, Zookeeper, Memchached, and more. Powerful Kibana UI apps for infrastructure and application observability. Flexible alerting and integration with 3pp ticketing systems, e.g. PagerDuty, Slack, Jira.",
+  "link1": "https://www.elastic.co/guide/en/fleet/current/index.html"
+}

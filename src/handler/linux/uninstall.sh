@@ -3,7 +3,9 @@ set -euo pipefail
 script_path=$(dirname $(readlink -f "$0"))
 source $script_path/helper.sh
 
-# for status
+# uninstall script is ran at uninstall time, either triggered by user or during vm extension update
+
+# var for reporting uninstall status
 name="Uninstall elastic agent"
 first_operation="unenrolling elastic agent"
 second_operation="uninstalling elastic agent and removing any elastic agent related folders"
@@ -12,6 +14,7 @@ sub_name="Elastic Agent"
 
 checkOS
 
+# Unenroll_ElasticAgent_DEB_RPM unenrolls the elastic agent for Debian and RPM os's
 Unenroll_ElasticAgent_DEB_RPM()
 {
   log "INFO" "[Unenroll_ElasticAgent_DEB_RPM] Unenrolling elastic agent"
@@ -61,6 +64,7 @@ Unenroll_ElasticAgent_DEB_RPM()
   write_status "$name" "$first_operation" "success" "$message" "$sub_name" "success" "Elastic Agent service has been unenrolled"
 }
 
+# Uninstall_ElasticAgent_DEB_RPM uninstalls the elastic agent and removes directories for Debian and RPM os's
 Uninstall_ElasticAgent_DEB_RPM() {
   if [ "$DISTRO_OS" = "RPM" ]; then
     sudo rpm -e elastic-agent
@@ -85,7 +89,7 @@ Uninstall_ElasticAgent_DEB_RPM() {
   log "INFO" "[Uninstall_ElasticAgent_DEB_RPM] Elastic Agent removed"
 }
 
-
+# Uninstall_ElasticAgent checks distro and removes installation of the elastic agent
 Uninstall_ElasticAgent()
 {
   log "INFO" "[Uninstall_ElasticAgent] Unenrolling Elastic Agent"

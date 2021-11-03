@@ -1,0 +1,56 @@
+{
+  "handler": "Microsoft.Compute.VmExtension",
+  "version": "0.0.1-preview",
+  "parameters": {
+    "elements": [
+      {
+        "name": "cloudid",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Cloud ID",
+        "defaultValue": "",
+        "toolTip": "The Cloud ID is a unique ID to your hosted Elasticsearch cluster on Elastic Cloud Enterprise. All clusters that support the Cloud ID automatically get one which is available in the Deployment page",
+        "constraints": {
+          "required": true
+        },
+        "visible": true
+      },
+      {
+        "name": "username",
+        "type": "Microsoft.Compute.UserNameTextBox",
+        "label": "Username",
+        "defaultValue": "",
+        "toolTip": "A valid username that has access to the elastic cloud cluster.",
+        "constraints": {
+          "required": true
+        },
+        "osPlatform": "Windows",
+        "visible": true
+      },
+      {
+        "name": "password",
+        "type": "Microsoft.Common.PasswordBox",
+        "label": {
+          "password": "Password",
+          "confirmPassword": "Confirm password"
+        },
+        "toolTip": "A valid password that can access to the elastic cloud cluster in combination with the username above.",
+        "constraints": {
+          "required": true,
+          "regex": "",
+          "validationMessage": ""
+        },
+        "options": {
+          "hideConfirmation": false
+        },
+        "visible": true
+      }
+    ],
+    "outputs": {
+      "vmName": "[vmName()]",
+      "location": "[location()]",
+      "cloudid": "[elements('cloudid')]",
+      "username": "[elements('username')]",
+      "password": "[elements('password')]"
+    }
+  }
+}

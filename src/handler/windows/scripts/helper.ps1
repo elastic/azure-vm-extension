@@ -8,6 +8,7 @@ $scriptDir = GetDirectory
 
 $extensionRoot = [System.IO.Path]::GetFullPath("$scriptDir\\..")
 
+# Get-PowershellVersion gets running version of powershell, necessary to detect which commands apply/are compatible
 function Get-PowershellVersion {
   if(!$powershellVersion)
   {
@@ -24,6 +25,7 @@ function Run-Powershell2-With-Dot-Net4 {
   }
 }
 
+# Get-CloudId gets the cloudID from the n.settings configuration file
 function Get-CloudId($powershellVersion) {
     $cloudId = Get-PublicSettings-From-Config-Json "cloudId"  $powershellVersion
     if ( $cloudId){
@@ -32,6 +34,7 @@ function Get-CloudId($powershellVersion) {
     return ""
 }
 
+# Get-Username gets the username from the n.settings configuration file
 function Get-Username($powershellVersion) {
     $username = Get-PublicSettings-From-Config-Json "username"  $powershellVersion
     if ( $username){
@@ -40,6 +43,7 @@ function Get-Username($powershellVersion) {
     return ""
 }
 
+# Get-Elasticsearch-URL retrieves the es url by encoding and parsing the cloudID value
 function Get-Elasticsearch-URL($powershellVersion) {
   $powershellVersion = Get-PowershellVersion
   $cloudId = Get-CloudId $powershellVersion
@@ -53,6 +57,7 @@ function Get-Elasticsearch-URL($powershellVersion) {
   return ""
 }
 
+# Get-Kibana-URL retrieves the Kibana url by encoding and parsing the cloudID value
 function Get-Kibana-URL ($powershellVersion) {
   $cloudId = Get-CloudId $powershellVersion
   if ( $cloudId -ne ""){
@@ -65,6 +70,7 @@ function Get-Kibana-URL ($powershellVersion) {
   return ""
 }
 
+# Get-Stack-Version retrieves the stack version by pinging the es cluster and reading output
 function Get-Stack-Version {
   $powershellVersion = Get-PowershellVersion
   $elasticsearchUrl = Get-Elasticsearch-URL $powershellVersion
@@ -107,6 +113,7 @@ function Get-Stack-Version {
   return ""
 }
 
+# HasFleetServer checks if stack version has Fleet Server, expecting this to start with 7.13
 function HasFleetServer {
     param([string]$esVersion)
     $major=$esVersion.split(".")[0]
@@ -122,6 +129,7 @@ function HasFleetServer {
     return $false
 }
 
+# Get-PublicSettings-From-Config-Json gets all public settings from the current configuration file n.settings
 function Get-PublicSettings-From-Config-Json($key, $powershellVersion) {
     Try
     {
@@ -146,6 +154,7 @@ function Get-PublicSettings-From-Config-Json($key, $powershellVersion) {
     }
 }
 
+# Get-ProtectedSettings-From-Config-Json gets all private/encrypted settings from the current configuration file n.settings
 function Get-ProtectedSettings-From-Config-Json($key, $powershellVersion) {
     Try
     {
@@ -170,6 +179,7 @@ function Get-ProtectedSettings-From-Config-Json($key, $powershellVersion) {
     }
 }
 
+# Get-Azure-Logs-Path retrieves the log path from HandlerEnvironment.json file
 function Get-Azure-Logs-Path() {
   try
   {
@@ -194,6 +204,7 @@ function Get-Azure-Logs-Path() {
   }
 }
 
+# Get-Azure-Latest-Config-File retrieves the latest configuration file n.settings
 function Get-Azure-Latest-Config-File($powershellVersion) {
   Try
   {
@@ -231,6 +242,7 @@ function Get-Azure-Latest-Config-File($powershellVersion) {
   }
 }
 
+# Get-Azure-Status-Path retrieves the status path from HandlerEnvironment.json file
 function Get-Azure-Status-Path($powershellVersion) {
   Try
   {
@@ -255,6 +267,7 @@ function Get-Azure-Status-Path($powershellVersion) {
   }
 }
 
+# Get-Latest-Settings-File retrieves the latest file from a directory
 function Get-Latest-Settings-File($configFolder) {
   $configFiles = get-childitem $configFolder -recurse | where {$_.extension -eq ".settings"}
 
@@ -267,6 +280,7 @@ function Get-Latest-Settings-File($configFolder) {
   return $configFileName
 }
 
+# Get-Sequence retrieves latest sequence number in the configuration directory
 function Get-Sequence() {
     $settingsSequence = "0"
     $powershellVersion = Get-PowershellVersion
@@ -279,6 +293,7 @@ function Get-Sequence() {
     return $settingsSequence
 }
 
+# DownloadFile downloads the elastic agent artifact from either public repo or staging (for testing)
 function DownloadFile {
     Param(
         [Parameter(Mandatory=$True)]
@@ -322,6 +337,7 @@ function DownloadFile {
     while ($trials -lt $Retries)
 }
 
+# Get-Latest-Status-File gets the latest status file in the directory
 function Get-Latest-Status-File($statusFolder) {
   $statusFiles = get-childitem $statusFolder -recurse | where {$_.extension -eq ".status"}
 
@@ -334,6 +350,7 @@ function Get-Latest-Status-File($statusFolder) {
   return $statusFileName
 }
 
+# Write-Status writes status in the status file, required for azure vm extension install process
 function Write-Status
 {
  Param
@@ -395,10 +412,12 @@ function Write-Status
   }
 }
 
+# normalize-json helper function to normalize json
 function normalize-json($json) {
   $json -Join " "
 }
 
+# Get-Agent-Id gets the agent id value from the fleet.yml file
 function Get-Agent-Id($fileLocation){
     $text = Get-Content -Path "$fileLocation"
     $regex = '(?ms)(^)agent:(?:.+?)id:\s?(.*?)(?:[\r\n]|$)'
@@ -408,6 +427,7 @@ function Get-Agent-Id($fileLocation){
     return $OutputText
 }
 
+# Get-Default-Policy retrieves default policy from the list of policies
 function Get-Default-Policy($content){
     foreach ($policy in $content) {
         if ($policy.name  -like  "*Default*" -And $policy.active -eq "true" -And $policy.policy_id -notlike "*elastic-agent-on-cloud*") {
@@ -416,6 +436,7 @@ function Get-Default-Policy($content){
     }
 }
 
+# Get-AnyActive-Policy will retrieve any active policy from the list of policies
 function Get-AnyActive-Policy($content){
     foreach ($policy in $content) {
         if ($policy.active -eq "true") {
@@ -426,6 +447,7 @@ function Get-AnyActive-Policy($content){
 
 #region encryption
 
+# Encrypt will encrypt text based on certificate thumprint
 Function Encrypt {
     [CmdletBinding()]
     [OutputType([System.String])]
@@ -448,6 +470,7 @@ Function Encrypt {
     Return $base64string
 }
 
+# Decrypt will decrypt text based on certificate thumprint
 function Decrypt
 {
     [CmdletBinding()]
@@ -476,6 +499,7 @@ function Decrypt
     Return ""
 }
 
+# Get-Password will retrieve the private setting from the configruation file, decrypt it and return it
 function Get-Password($powershellVersion) {
     Try
     {
@@ -505,6 +529,7 @@ function Get-Password($powershellVersion) {
     }
 }
 
+# Get-Base64Auth will retrieve the private setting from the configruation file, decrypt it and return it
 function Get-Base64Auth($powershellVersion) {
     Try
     {
@@ -537,6 +562,7 @@ function Get-Base64Auth($powershellVersion) {
 
 #Env
 
+# Is-New-Config checks if user has entered new configurations options for the elastic agent
 function Is-New-Config {
     $currentSequence = [Environment]::GetEnvironmentVariable('ELASTICAGENTSEQUENCE', 'Machine')
     $newSequence = [Environment]::GetEnvironmentVariable("ConfigSequenceNumber")
@@ -555,6 +581,7 @@ function Is-New-Config {
     return $true
 }
 
+# Set-SequenceEnvVariables sets env variables to check for new sequence numbers
 function Set-SequenceEnvVariables
 {
     $newSequence = [Environment]::GetEnvironmentVariable("ConfigSequenceNumber")
@@ -565,11 +592,13 @@ function Set-SequenceEnvVariables
     [Environment]::SetEnvironmentVariable("ELASTICAGENTUPDATE", 0, "Machine")
 }
 
+# Set-UpdateEnvVariables sets env variable if is vm extension update
 function Set-UpdateEnvVariables
 {
     [Environment]::SetEnvironmentVariable("ELASTICAGENTUPDATE", 1, "Machine")
 }
 
+#Get-Prev-Settings-File gets previous configuration file in specific folder
 function Get-Prev-Settings-File($configFolder) {
     $configFiles = get-childitem $configFolder -recurse | where {$_.extension -eq ".settings"}
     if($configFiles -is [system.array]) {
@@ -581,6 +610,9 @@ function Get-Prev-Settings-File($configFolder) {
     return $configFileName
 }
 
+# previous section includes similar functions to the latest ones, they will retrieve the previous configuration setup in order to unenroll the elastic agent from the old Fleet env and uninstall it
+
+#Get-Azure-Prev-Config-File gets previous configuration file
 function Get-Azure-Prev-Config-File($powershellVersion) {
     Try
     {
@@ -617,7 +649,7 @@ function Get-Azure-Prev-Config-File($powershellVersion) {
     }
 }
 
-
+# Get-Prev-ProtectedSettings-From-Config-Json retrieves the previous private configuration settings
 function Get-Prev-ProtectedSettings-From-Config-Json($key, $powershellVersion) {
     Try
     {
@@ -642,6 +674,7 @@ function Get-Prev-ProtectedSettings-From-Config-Json($key, $powershellVersion) {
     }
 }
 
+# Get-Prev-Password retrieves password from previous configuration options
 function Get-Prev-Password($powershellVersion) {
     Try
     {
@@ -671,6 +704,7 @@ function Get-Prev-Password($powershellVersion) {
     }
 }
 
+# Get-Prev-Base64Auth retrieves base64auth from previous configuration options
 function Get-Prev-Base64Auth($powershellVersion) {
     Try
     {
@@ -701,6 +735,7 @@ function Get-Prev-Base64Auth($powershellVersion) {
     }
 }
 
+# Get-Prev-PublicSettings-From-Config-Json retrieves previous public settings
 function Get-Prev-PublicSettings-From-Config-Json($key, $powershellVersion) {
     Try
     {
@@ -725,6 +760,7 @@ function Get-Prev-PublicSettings-From-Config-Json($key, $powershellVersion) {
     }
 }
 
+# Get-Prev-CloudId retrieves previous cloudID
 function Get-Prev-CloudId($powershellVersion) {
     $cloudId = Get-Prev-PublicSettings-From-Config-Json "cloudId"  $powershellVersion
     if ( $cloudId){
@@ -733,6 +769,7 @@ function Get-Prev-CloudId($powershellVersion) {
     return ""
 }
 
+# Get-Prev-Username retrieves previous username
 function Get-Prev-Username($powershellVersion) {
     $username = Get-Prev-PublicSettings-From-Config-Json "username"  $powershellVersion
     if ( $username){
@@ -741,6 +778,7 @@ function Get-Prev-Username($powershellVersion) {
     return ""
 }
 
+# Get-Prev-Kibana-URL retrieves previous kibana URL
 function Get-Prev-Kibana-URL($powershellVersion) {
     $cloudId = Get-Prev-CloudId $powershellVersion
     if ( $cloudId -ne ""){
@@ -753,6 +791,7 @@ function Get-Prev-Kibana-URL($powershellVersion) {
     return ""
 }
 
+# Get-Prev-Elasticsearch-URL retrieves previous ES URL
 function Get-Prev-Elasticsearch-URL($powershellVersion) {
     $powershellVersion = Get-PowershellVersion
     $cloudId = Get-Prev-CloudId $powershellVersion
@@ -766,6 +805,7 @@ function Get-Prev-Elasticsearch-URL($powershellVersion) {
     return ""
 }
 
+# Get-Prev-Stack-Version retrieves previous stack version
 function Get-Prev-Stack-Version {
     $powershellVersion = Get-PowershellVersion
     $elasticsearchUrl = Get-Prev-Elasticsearch-URL $powershellVersion
