@@ -137,7 +137,7 @@ endif
 		--env ES_URL="$(ES_URL)" \
 		--env VM_NAME="$(VM_NAME)" \
 		--env TF_VAR_isWindows="$(TF_VAR_isWindows)" \
-		--env TYPE=$* \
+		--env TYPE=test-$* \
 		--env HOME=/app \
 		-u $(CURRENT_UID):$(CURRENT_GID) \
 		$(DOCKER_IMAGE)
