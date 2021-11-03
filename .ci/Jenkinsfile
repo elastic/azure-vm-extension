@@ -57,11 +57,11 @@ pipeline {
       options { skipDefaultCheckout() }
       failFast false
       matrix {
-        agent { label 'ubuntu-20' }
+        agent {label "${OS_VERSION}"}
         axes {
           axis {
             name 'OS_VERSION'
-            values 'ubuntu-18', 'windows-2016', 'redhat-8'
+						values 'ubuntu-18 && immutable' // TODO: support windows, 'windows-2016 && windows-immutable'
           }
         }
         environment {
@@ -116,21 +116,22 @@ pipeline {
               }
             }
           }
-          stage('Terraform') {
+          stage('Prepare context') {
             options { skipDefaultCheckout() }
             environment {
-              STAGE_NAME = "Terraform|${STACK_VERSION}|${OS_VERSION}"
+              STAGE_NAME = "Context|${STACK_VERSION}|${OS_VERSION}"
             }
             steps {
-              withGithubNotify(context: "Terraform ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
-                terraform(goal: 'terraform-run')
+              withGithubNotify(context: "Context ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
+	              withCloudEnv() {
+	                sh(label: 'Prepare context', script: 'make -C .ci prepare-context')
+	              }
               }
               successStage(env.STAGE_NAME)
             }
             post {
               failure {
                 whenFalse(isSuccessStage(env.STAGE_NAME)) {
-                  destroyTerraform()
                   destroyCluster()
                 }
               }
@@ -148,7 +149,6 @@ pipeline {
             post {
               always {
                 junit(allowEmptyResults: true, keepLongStdio: true, testResults: 'test/ats/TEST-*.xml')
-                destroyTerraform()
                 destroyCluster()
               }
             }
@@ -179,24 +179,6 @@ def destroyCluster( ) {
   }
   withVaultEnv(){
     sh(label: 'Destroy Cluster', script: 'make -C .ci destroy-cluster')
-  }
-}
-
-def destroyTerraform( ) {
-  terraform(goal: 'terraform-debug', returnStatus: true)
-  if (params.skipDestroy) {
-    echo 'Skipped the destroy terraform step'
-    return
-  }
-  terraform(goal: 'terraform-destroy', returnStatus: true)
-}
-
-def terraform(Map args = [:]) {
-  withCloudEnv() {
-    withAzEnv() {
-      sh(label: "Run ${args.goal}", script: "make -C .ci ${args.goal}", returnStatus: args.get('returnStatus', false))
-      archiveArtifacts allowEmptyArchive: true, artifacts: 'test/terraform/debug/*.log'
-    }
   }
 }
 
