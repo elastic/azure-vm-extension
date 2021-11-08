@@ -23,6 +23,7 @@ prepare-pr-context:  ## Prepare the files needed to be run within the VM context
 	@vault read -field prv $(VAULT_SECRET) $(LINUX_WAAGENT_PATH)/cert.prv
 	@vault read -field crt $(VAULT_SECRET) $(LINUX_WAAGENT_PATH)/cert.crt
 	@echo 'add settings to the 0.settings'
+	tree $(LINUX_WAAGENT_PATH)
 
 .PHONY: prepare-pr-install
 prepare-pr-install:  ## Prepare the install steps for the PR.
