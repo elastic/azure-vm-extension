@@ -5,6 +5,7 @@ CURRENT_GID := $(shell id -g)
 DOCKER_IMAGE=docker.elastic.co/observability-ci/azure-vm-tools
 LINUX_WAAGENT_PATH=/var/lib/waagent
 LINUX_FOLDER_NAME=Elastic.ElasticAgent.linux-1
+VAULT_SECRET=secret/observability-team/ci/elastic/azure-vm-extension
 
 .PHONY: help
 .DEFAULT_GOAL := help
@@ -19,7 +20,8 @@ prepare-pr-context:  ## Prepare the files needed to be run within the VM context
 	@chmod 700 $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/*.sh
 	@cp ../test/mock/HandlerEnvironment.json $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
 	@cp ../test/mock/0.settings $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config/
-	@cp ../test/mock/cert* $(LINUX_WAAGENT_PATH)/
+	@vault read -field prv $(VAULT_SECRET) $(LINUX_WAAGENT_PATH)/cert.prv
+	@vault read -field crt $(VAULT_SECRET) $(LINUX_WAAGENT_PATH)/cert.crt
 	@echo 'add settings to the 0.settings'
 
 .PHONY: prepare-pr-install
