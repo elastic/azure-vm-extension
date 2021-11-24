@@ -124,7 +124,7 @@ pipeline {
             steps {
               withGithubNotify(context: "Context ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
                 withCloudEnv() {
-                  sh(label: 'Prepare context', script: 'make -C .ci prepare-pr-context')
+                  sh(label: 'Prepare context', script: 'sudo make -C .ci prepare-pr-context')
                 }
               }
               successStage(env.STAGE_NAME)
@@ -142,7 +142,7 @@ pipeline {
             steps {
               withGithubNotify(context: "Validate Install ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
                 withValidationEnv() {
-                  sh(label: 'Validate PR install', script: 'make -C .ci prepare-pr-install')
+                  sh(label: 'Validate PR install', script: 'sudo make -C .ci prepare-pr-install')
                   sh(label: 'Validate install', script: 'make -C .ci validate-install')
                 }
               }
@@ -159,7 +159,7 @@ pipeline {
             steps {
               withGithubNotify(context: "Validate Uninstall ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
                 withValidationEnv() {
-                  sh(label: 'Validate PR uninstall', script: 'make -C .ci prepare-pr-uninstall')
+                  sh(label: 'Validate PR uninstall', script: 'sudo make -C .ci prepare-pr-uninstall')
                   sh(label: 'Validate uninstall', script: 'make -C .ci validate-uninstall')
                 }
               }
