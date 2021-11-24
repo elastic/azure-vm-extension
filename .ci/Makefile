@@ -26,16 +26,17 @@ ifndef TF_VAR_cloudId
 	@echo "Please set TF_VAR_cloudId in the environment to generate the extension"
 	exit 1
 endif
-	mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config
-	mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/status
-	cp ../src/handler/linux/* $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
-	chmod 700 $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/*.sh
-	cp ../test/mock/HandlerEnvironment.json $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
-	sed -e "s#TF_VAR_username#$(TF_VAR_username)#g" -e "s#TF_VAR_cloudId#$(TF_VAR_cloudId)#g" ../test/mock/0.settings > $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config/0.settings
-	vault read -field prv $(VAULT_SECRET) > $(LINUX_WAAGENT_PATH)/cert.prv
-	vault read -field crt $(VAULT_SECRET) > $(LINUX_WAAGENT_PATH)/cert.crt
-	echo 'encrypt the password'
-	tree $(LINUX_WAAGENT_PATH)
+	@mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config
+	@mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/status
+	@cp ../src/handler/linux/* $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
+	@chmod 700 $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/*.sh
+	@cp ../test/mock/HandlerEnvironment.json $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
+	@vault read -field prv $(VAULT_SECRET) > $(LINUX_WAAGENT_PATH)/cert.prv
+	@vault read -field crt $(VAULT_SECRET) > $(LINUX_WAAGENT_PATH)/cert.crt
+	@sed -e "s#TF_VAR_username#$(TF_VAR_username)#g" \
+	    -e "s#TF_VAR_cloudId#$(TF_VAR_cloudId)#g" \
+	    ../test/mock/0.settings > $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config/0.settings
+	@tree $(LINUX_WAAGENT_PATH)
 
 .PHONY: prepare-pr-install
 prepare-pr-install:  ## Prepare the install steps for the PR.
