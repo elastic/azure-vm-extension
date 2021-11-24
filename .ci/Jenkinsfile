@@ -79,7 +79,7 @@ pipeline {
           stage('Create cluster'){
             options { skipDefaultCheckout() }
             environment {
-              STAGE_NAME = "Create cluster|${STACK_VERSION}|${OS_VERSION}"
+              STAGE_NAME = "Create cluster|${ELASTIC_STACK_VERSION}|${OS_VERSION}"
             }
             steps {
               withGithubNotify(context: "Create Cluster ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
@@ -100,7 +100,7 @@ pipeline {
           stage('Prepare tools') {
             options { skipDefaultCheckout() }
             environment {
-              STAGE_NAME = "Tools|${STACK_VERSION}|${OS_VERSION}"
+              STAGE_NAME = "Tools|${ELASTIC_STACK_VERSION}|${OS_VERSION}"
             }
             steps {
               withCloudEnv() {
@@ -119,7 +119,7 @@ pipeline {
           stage('Prepare context') {
             options { skipDefaultCheckout() }
             environment {
-              STAGE_NAME = "Context|${STACK_VERSION}|${OS_VERSION}"
+              STAGE_NAME = "Context|${ELASTIC_STACK_VERSION}|${OS_VERSION}"
             }
             steps {
               withGithubNotify(context: "Context ${ELASTIC_STACK_VERSION} ${OS_VERSION}") {
