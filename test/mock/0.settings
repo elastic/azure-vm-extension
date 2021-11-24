@@ -2,10 +2,10 @@
   "runtimeSettings":[
     {
       "handlerSettings":{
-        "protectedSettings":"....",
+        "protectedSettings":"encrypted_password",
         "publicSettings":{
-          "cloudId":"CLOUD_ID",
-          "username":"USERNAME"
+          "cloudId":"TF_VAR_cloudId",
+          "username":"TF_VAR_username"
         },
         "protectedSettingsCertThumbprint":"cert"
       }

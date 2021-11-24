@@ -14,15 +14,27 @@ help: ## Display this help text
 
 .PHONY: prepare-pr-context
 prepare-pr-context:  ## Prepare the files needed to be run within the VM context.
-	@mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config
-	@mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/status
-	@cp ../src/handler/linux/* $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
-	@chmod 700 $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/*.sh
-	@cp ../test/mock/HandlerEnvironment.json $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
-	@cp ../test/mock/0.settings $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config/
-	@vault read -field prv $(VAULT_SECRET) $(LINUX_WAAGENT_PATH)/cert.prv
-	@vault read -field crt $(VAULT_SECRET) $(LINUX_WAAGENT_PATH)/cert.crt
-	@echo 'add settings to the 0.settings'
+ifndef TF_VAR_username
+	@echo "Please set TF_VAR_username in the environment to generate the extension"
+	exit 1
+endif
+ifndef TF_VAR_password
+	@echo "Please set TF_VAR_password in the environment to generate the extension"
+	exit 1
+endif
+ifndef TF_VAR_cloudId
+	@echo "Please set TF_VAR_cloudId in the environment to generate the extension"
+	exit 1
+endif
+	mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config
+	mkdir -p $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/status
+	cp ../src/handler/linux/* $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
+	chmod 700 $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/*.sh
+	cp ../test/mock/HandlerEnvironment.json $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
+	sed -e "s#TF_VAR_username#$(TF_VAR_username)#g" -e "s#TF_VAR_cloudId#$(TF_VAR_cloudId)#g" ../test/mock/0.settings > $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/config/0.settings
+	vault read -field prv $(VAULT_SECRET) > $(LINUX_WAAGENT_PATH)/cert.prv
+	vault read -field crt $(VAULT_SECRET) > $(LINUX_WAAGENT_PATH)/cert.crt
+	echo 'encrypt the password'
 	tree $(LINUX_WAAGENT_PATH)
 
 .PHONY: prepare-pr-install
