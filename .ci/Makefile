@@ -33,7 +33,7 @@ endif
 	@cp ../test/mock/HandlerEnvironment.json $(LINUX_WAAGENT_PATH)/$(LINUX_FOLDER_NAME)/
 	@vault read -field prv $(VAULT_SECRET) > $(LINUX_WAAGENT_PATH)/cert.prv
 	@vault read -field crt $(VAULT_SECRET) > $(LINUX_WAAGENT_PATH)/cert.crt
-	$(eval encrypted_password = $(shell openssl cms -encrypt -in <(echo "{\"password\":\"${TF_VAR_password}\"}") -inkey $(LINUX_WAAGENT_PATH)/cert.prv  -recip $(LINUX_WAAGENT_PATH)/cert.crt -inform dem -outform PEM | sed '1d;$$d' | base64))
+	$(eval encrypted_password = $(shell openssl cms -encrypt -in <(echo "{\"password\":\"${TF_VAR_password}\"}") -inkey $(LINUX_WAAGENT_PATH)/cert.prv  -recip $(LINUX_WAAGENT_PATH)/cert.crt -inform dem -outform PEM | sed '1d;$$d'))
 	@sed -e "s#TF_VAR_username#$(TF_VAR_username)#g" \
 	    -e "s#TF_VAR_cloudId#$(TF_VAR_cloudId)#g" \
 	    -e "s#encrypted_password#$(encrypted_password)#g" \
