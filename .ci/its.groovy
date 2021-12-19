@@ -50,7 +50,7 @@ pipeline {
     disableConcurrentBuilds()
   }
   triggers {
-    cron("${(env.BRANCH_NAME.trim() == 'master') ? 'H H(5-6) * * 1-5' : ''}")
+    cron("${(env.BRANCH_NAME.trim() == 'main') ? 'H H(5-6) * * 1-5' : ''}")
   }
   parameters {
     booleanParam(name: 'skipDestroy', defaultValue: "false", description: "Whether to skip the destroy of the cluster and terraform.")
