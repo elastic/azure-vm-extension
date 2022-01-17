@@ -35,7 +35,7 @@ pipeline {
     PIPELINE_LOG_LEVEL = 'INFO'
     LANG = "C.UTF-8"
     LC_ALL = "C.UTF-8"
-    ELASTIC_STACK_VERSION = '7.14.1'
+    ELASTIC_STACK_VERSION = '7.15.2'
   }
   options {
     buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5', daysToKeepStr: '7'))
