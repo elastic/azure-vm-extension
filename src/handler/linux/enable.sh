@@ -167,11 +167,18 @@ Enroll_ElasticAgent() {
     log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to retrieve the enrolment_token"
     return $EXITCODE
   fi
-  get_default_policy "\${jsonResult}"
+
+  get_azure_policy "\${jsonResult}"
   if [[ "$POLICY_ID" = "" ]]; then
-    log "WARN" "[Enroll_ElasticAgent] Default policy could not be found or is not active. Will select any active policy instead"
-    get_any_active_policy "\${jsonResult}"
+    log "WARN" "[Enroll_ElasticAgent] Azure VM extension policy could not be found or is not active. Will create a VM extension policy instead"
+    create_azure_policy "\${jsonResult}"
+    get_azure_policy "\${jsonResult}"
+      if [[ "$POLICY_ID" = "" ]]; then
+        log "WARN" "[Enroll_ElasticAgent] Azure VM extension policy could not be found or is not active after creating it. Will select any active policy instead"
+        get_any_active_policy "\${jsonResult}"
+      fi
   fi
+
   if [[ "$POLICY_ID" = "" ]]; then
     log "ERROR" "[Enroll_ElasticAgent] No active policies were found. Please create a policy in Kibana Fleet"
     return 1

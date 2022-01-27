@@ -427,12 +427,41 @@ function Get-Agent-Id($fileLocation){
     return $OutputText
 }
 
-# Get-Default-Policy retrieves default policy from the list of policies
-function Get-Default-Policy($content){
+# Get-Azure-Policy retrieves default policy from the list of policies
+function Get-Azure-Policy($content){
     foreach ($policy in $content) {
-        if ($policy.name  -like  "*Default*" -And $policy.active -eq "true" -And $policy.policy_id -notlike "*elastic-agent-on-cloud*") {
+        if ($policy.name  -like  "*Azure VM extension*" -And $policy.active -eq "true" -And $policy.policy_id -notlike "*elastic-agent-on-cloud*") {
         return $policy.id
           }
+    }
+}
+
+# Create-Azure-Policy creates a dedicated Azure VM extension policy
+function Create-Azure-Policy($content){
+    $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+    $headers.Add("kbn-xsrf", "true")
+    $encodedCredentials = ""
+    if ($password) {
+        $username = Get-Username $powershellVersion
+        if (-Not $username) {
+            throw "Username could not be found"
+        }
+        $pair = "$($username):$($password)"
+        $encodedCredentials = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+    } else {
+        $encodedCredentials = $base64Auth
+    }
+    $headers.Add('Authorization', "Basic $encodedCredentials")
+    if ( $powershellVersion -gt 3 ) {
+        $headers.Add("Accept","application/json")
+    }
+
+    $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agent_policies?sys_monitoring=true/$($defaultPolicy)"  -Method 'POST' -Headers $headers -Body '{"name":"Azure VM extension policy","description":"Dedicated agent policy for Azure VM extension","namespace":"default","monitoring_enabled":["logs","metrics"]}' -UseBasicParsing
+    if ($jsonResult.statuscode -eq '200') {
+        Write-Log "Successfully created the Azure VM extension policy $jsonResult" "INFO"
+    }
+    else {
+        throw "Creating Azure VM extension policy failed with $jsonResult.statuscode"
     }
 }
 

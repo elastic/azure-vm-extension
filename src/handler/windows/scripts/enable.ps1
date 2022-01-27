@@ -106,16 +106,21 @@ function Install-ElasticAgent {
             $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys"  -Method 'GET' -Headers $headers -UseBasicParsing
             if ($jsonResult.statuscode -eq '200') {
                 $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "list"
-                $defaultPolicy = Get-Default-Policy $keyValue
-                if (-Not $defaultPolicy) {
-                    Write-Log "No active Default policy has been found, will select the first active policy instead" "WARN"
-                    $defaultPolicy = Get-AnyActive-Policy $keyValue
+                $azurePolicy = Get-Azure-Policy $keyValue
+                if (-Not $azurePolicy) {
+                    Write-Log "No active Azure VM extension policy has been found, create a VM extension policy instead" "WARN"
+                    $azurePolicy = Create-Azure-Policy $keyValue
+                    $azurePolicy = Get-Azure-Policy $keyValue
+                    if ($jsonResult.statuscode -eq '200') {
+                        $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "list"
+                        $azurePolicy = Get-AnyActive-Policy $keyValue
+                    }
                 }
-                if (-Not $defaultPolicy) {
+                if (-Not $azurePolicy) {
                     throw "No active policies were found. Please create a policy in Kibana Fleet"
                 }
-                Write-Log "Found enrollment_token id $defaultPolicy" "INFO"
-                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys/$($defaultPolicy)"  -Method 'GET' -Headers $headers -UseBasicParsing
+                Write-Log "Found enrollment_token id $azurePolicy" "INFO"
+                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys/$($azurePolicy)"  -Method 'GET' -Headers $headers -UseBasicParsing
                 if ($jsonResult.statuscode -eq '200') {
                     $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "item"
                     $enrollmenToken=$keyValue.api_key
