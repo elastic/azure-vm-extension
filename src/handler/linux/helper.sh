@@ -28,6 +28,7 @@ OLD_PROTECTED_SETTINGS=""
 OLD_THUMBPRINT=""
 IS_FLEET_SERVER=""
 HAS_FLAG_VERSION=""
+ID=""
 
 # checkOS checks distro
 checkOS()
@@ -295,23 +296,6 @@ function retry_backoff() {
   done
 }
 
-# get_azure_policy will retrieve the Azure VM extension policy from a list of policies
-get_azure_policy() {
-   eval result="$1"
-   list=$(echo "$result" | jq -r '.list')
-   for row in $(echo "${list}" | jq -r '.[] | @base64'); do
-   _jq() {
-     echo ${row} | base64 --decode | jq -r ${1}
-    }
-  name=$(_jq '.name')
-  is_active=$(_jq '.active')
-  policy_id=$(_jq '.policy_id')
-  if [[ "$name" == *"Azure VM extension"* ]]  && [[ "$is_active" = "true" ]] && [[ "$policy_id" != *"elastic-agent-on-cloud"* ]]; then
-  POLICY_ID=$(_jq '.id')
-  fi
-done
-}
-
 # create_azure_policy will create an Azure VM extension policy
 create_azure_policy() {
   result=$(curl -X POST "${KIBANA_URL}"/api/fleet/agent_policies?sys_monitoring=true -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" -d '{"name":"Azure VM extension policy","description":"Dedicated agent policy for Azure VM extension","namespace":"default","monitoring_enabled":["logs","metrics"]}' )
@@ -320,20 +304,49 @@ create_azure_policy() {
     log "ERROR" "[create_azure_policy] error calling $KIBANA_URL/api/fleet/agent_policies to create Azure VM extension policy $result"
     return $EXITCODE
   fi
+
+  # get new policy id
+  item=$(echo "$result" | jq -r '.item | @base64')
+  _jq() {
+    echo ${item} | base64 --decode | jq -r ${1}
+  }
+  name=$(_jq '.name')
+  status=$(_jq '.status')
+  policy_id=$(_jq '.id')
+  if [[ "$name" == *"Azure VM extension"* ]] && [[ "$status" == "active" ]] && [[ "$policy_id" != *"elastic-agent-on-cloud"* ]]; then
+    ID=$(_jq '.id')
+  fi
+}
+
+# get_azure_policy will retrieve the Azure VM extension policy from a list of policies
+get_azure_policy() {
+   eval result="$1"
+   items=$(echo "$result" | jq -r '.items')
+   for row in $(echo "${items}" | jq -r '.[] | @base64'); do
+   _jq() {
+     echo ${row} | base64 --decode | jq -r ${1}
+    }
+  name=$(_jq '.name')
+  status=$(_jq '.status')
+  id=$(_jq '.id')
+  if [[ "$name" == *"Azure VM extension"* ]]  && [[ "$status" = "active" ]] && [[ "$id" != *"elastic-agent-on-cloud"* ]]; then
+    ID=$(_jq '.id')
+  fi
 done
 }
 
 # get_any_active_policy will retrieve the first active policy
 get_any_active_policy() {
    eval result="$1"
-   list=$(echo "$result" | jq -r '.list')
-   for row in $(echo "${list}" | jq -r '.[] | @base64'); do
+   items=$(echo "$result" | jq -r '.items')
+   for row in $(echo "${items}" | jq -r '.[] | @base64'); do
    _jq() {
      echo ${row} | base64 --decode | jq -r ${1}
     }
-  is_active=$(_jq '.active')
-  if [[ "$is_active" = "true" ]]; then
-  POLICY_ID=$(_jq '.id')
+  status=$(_jq '.status')
+  id=$(_jq '.id')
+  if [[ "$status" = "active" ]] && [[ "$id" != *"elastic-agent-on-cloud"* ]]; then
+    ID=$(_jq '.id')
   fi
 done
 }
