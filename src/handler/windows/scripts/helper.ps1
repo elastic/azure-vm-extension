@@ -472,7 +472,7 @@ function Create-Azure-Policy($content){
     }
 
     # get new policy id
-    $policy= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "items"
+    $policy= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "item"
     if ($policy.name -like "*Azure VM extension*" -And $policy.status -eq "active") {
         return $policy.id
     }
