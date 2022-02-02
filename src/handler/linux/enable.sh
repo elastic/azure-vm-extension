@@ -172,9 +172,6 @@ Enroll_ElasticAgent() {
   if [[ "$ID" = "" ]]; then
     log "INFO" "[Enroll_ElasticAgent] Azure VM extension policy could not be found or is not active. Will create a VM extension policy instead"
     create_azure_policy
-    log "INFO" "[Enroll_ElasticAgent] Done creating Azure VM extension policy, sleep for 30 seconds"
-    sleep 30
-    log "INFO" "[Enroll_ElasticAgent] Done sleeping"
   fi
 
   if [[ "$ID" = "" ]]; then

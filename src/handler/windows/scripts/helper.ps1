@@ -430,7 +430,7 @@ function Get-Agent-Id($fileLocation){
 # Get-Azure-Policy retrieves default policy from the list of policies
 function Get-Azure-Policy($content){
     foreach ($policy in $content) {
-        if ($policy.name  -like  "*Azure VM extension*" -And $policy.active -eq "true" -And $policy.policy_id -notlike "*elastic-agent-on-cloud*") {
+        if ($policy.name  -like  "*Azure VM extension*" -And $policy.status -eq "active" -And $policy.id -notlike "*elastic-agent-on-cloud*") {
         return $policy.id
           }
     }
@@ -456,19 +456,32 @@ function Create-Azure-Policy($content){
         $headers.Add("Accept","application/json")
     }
 
-    $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agent_policies?sys_monitoring=true/$($defaultPolicy)"  -Method 'POST' -Headers $headers -Body '{"name":"Azure VM extension policy","description":"Dedicated agent policy for Azure VM extension","namespace":"default","monitoring_enabled":["logs","metrics"]}' -UseBasicParsing
+    $Body = @{
+        name = 'Azure VM extension policy'
+        description = 'Default agent policy for Azure VM extension'
+        namespace = 'default'
+        monitoring_enabled = '["logs","metrics"]'
+
+    }
+    $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agent_policies?sys_monitoring=true"  -Method 'POST' -Headers $headers -Body $Body -UseBasicParsing
     if ($jsonResult.statuscode -eq '200') {
         Write-Log "Successfully created the Azure VM extension policy $jsonResult" "INFO"
     }
     else {
         throw "Creating Azure VM extension policy failed with $jsonResult.statuscode"
     }
+
+    # get new policy id
+    $policy= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "items"
+    if ($policy.name -like "*Azure VM extension*" -And $policy.status -eq "active") {
+        return $policy.id
+    }
 }
 
 # Get-AnyActive-Policy will retrieve any active policy from the list of policies
 function Get-AnyActive-Policy($content){
     foreach ($policy in $content) {
-        if ($policy.active -eq "true") {
+        if ($policy.status -eq "active" -And $policy.id -notlike "*elastic-agent-on-cloud*") {
         return $policy.id
           }
     }
