@@ -176,7 +176,7 @@ Enroll_ElasticAgent() {
 
   if [[ "$POLICY_ID" = "" ]]; then
     log "ERROR" "[Enroll_ElasticAgent] Failed creating Azure VM extension policy. Please manually create one in Kibana Fleet instead"
-        return 1
+    return 1
   fi
 
   log "INFO" "[Enroll_ElasticAgent] policy selected is $POLICY_ID"

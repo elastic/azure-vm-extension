@@ -2,13 +2,13 @@
 set -euo pipefail
 
 # global vars
-LOGS_FOLDER="/var/log/azure"
-CONFIG_FILE="/home/azureuser/linux/config"
-STATUS_FOLDER="/home/azureuser/linux/status"
-CLOUD_ID="test-aws-ec2:ZWFzdHVzMi5henVyZS5lbGFzdGljLWNsb3VkLmNvbTo5MjQzJGNmYjBkOGViNjFjODRmOWM5MTJhMThmMzVmOWQ4MzNhJDIzMDBhMTZlNDFmOTRkOWNhOGNkZTUzNDg5ZWJlODY0"
-USERNAME="elastic"
-PASSWORD="EoNJqYjO3MDLbpcYXnfKIDt0"
 DISTRO_OS=""
+LOGS_FOLDER=""
+CONFIG_FILE=""
+STATUS_FOLDER=""
+CLOUD_ID=""
+USERNAME=""
+PASSWORD=""
 BASE64_AUTH=""
 ELASTICSEARCH_URL=""
 STACK_VERSION=""
