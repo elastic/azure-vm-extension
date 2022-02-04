@@ -180,11 +180,11 @@ Enroll_ElasticAgent() {
   fi
 
   log "INFO" "[Enroll_ElasticAgent] policy selected is $POLICY_ID"
-  # get POLICY_ID for /api/fleet/enrollment_api_keys
-  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment_api_keys -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
+  # get POLICY_ID for /api/fleet/enrollment-api-keys
+  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment-api-keys -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
   EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
-    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment_api_keys in order to list all enrollment_token"
+    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to list all enrollment_token"
     return $EXITCODE
   fi
   list=$(echo "$jsonResult" | jq -r '.list')
@@ -200,18 +200,18 @@ Enroll_ElasticAgent() {
   fi
   done
 
-  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment_api_keys/$POLICY_ID \
+  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment-api-keys/$POLICY_ID \
         -H 'Content-Type: application/json' \
         -H 'kbn-xsrf: true' \
         -u "$cred" )
   EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
-    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment_api_keys in order to retrieve the enrollment_token"
+    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to retrieve the enrollment_token"
     return $EXITCODE
   fi
-  enrolment_token=$(echo $jsonResult | jq -r '.item.api_key')
-  if [[ "$enrolment_token" = "" ]]; then
-    log "ERROR" "[Enroll_ElasticAgent] enrolment_token could not be found/parsed"
+  enrollment_token=$(echo $jsonResult | jq -r '.item.api_key')
+  if [[ "$enrollment_token" = "" ]]; then
+    log "ERROR" "[Enroll_ElasticAgent] enrollment_token could not be found/parsed"
     return 1
   fi
   log "INFO" "[Enroll_ElasticAgent] enrollment_token is $enrollment_token"
