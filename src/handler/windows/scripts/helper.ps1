@@ -430,7 +430,7 @@ function Get-Agent-Id($fileLocation){
 # Get-Azure-Policy retrieves default policy from the list of policies
 function Get-Azure-Policy($content){
     foreach ($policy in $content) {
-        if ($policy.name  -like  "*Azure VM extension*" -And $policy.status -eq "active" -And $policy.id -notlike "*elastic-agent-on-cloud*") {
+        if ($policy.name -like $policyName -And $policy.status -eq "active" -And $policy.id -notlike "*elastic-agent-on-cloud*") {
         return $policy.id
           }
     }
@@ -457,7 +457,7 @@ function Create-Azure-Policy($content){
     }
 
     $Body = @{
-        name = 'Azure VM extension policy'
+        name = $policyName
         description = 'Default agent policy for Azure VM extension'
         namespace = 'default'
         monitoring_enabled = '["logs","metrics"]'
@@ -473,7 +473,7 @@ function Create-Azure-Policy($content){
 
     # get new policy id
     $policy= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "item"
-    if ($policy.name -like "*Azure VM extension*" -And $policy.status -eq "active") {
+    if ($policy.name -eq $policyName -And $policy.status -eq "active") {
         return $policy.id
     }
 }

@@ -169,33 +169,22 @@ Enroll_ElasticAgent() {
   fi
 
   get_azure_policy "\${jsonResult}"
-  if [[ "$ID" = "" ]]; then
+  if [[ "$POLICY_ID" = "" ]]; then
     log "INFO" "[Enroll_ElasticAgent] Azure VM extension policy could not be found or is not active. Will create a VM extension policy instead"
     create_azure_policy
   fi
 
-  if [[ "$ID" = "" ]]; then
-    #query for all agent policies again
-    jsonResult=$(curl -X GET "${KIBANA_URL}"/api/fleet/agent_policies  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
-    local EXITCODE=$?
-    if [ $EXITCODE -ne 0 ]; then
-      log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/agent_policies in order to retrieve the agent_policies"
-      return $EXITCODE
-    fi
-    get_any_active_policy "\${jsonResult}"
+  if [[ "$POLICY_ID" = "" ]]; then
+    log "ERROR" "[Enroll_ElasticAgent] Failed creating Azure VM extension policy. Please manually create one in Kibana Fleet instead"
+        return 1
   fi
 
-  if [[ "$ID" = "" ]]; then
-    log "ERROR" "[Enroll_ElasticAgent] No active policies were found. Please create a policy in Kibana Fleet"
-    return 1
-  fi
-
-  log "INFO" "[Enroll_ElasticAgent] policy selected is $ID"
-  # get POLICY_ID for /api/fleet/enrollment-api-keys from ID
-  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment-api-keys -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
+  log "INFO" "[Enroll_ElasticAgent] policy selected is $POLICY_ID"
+  # get POLICY_ID for /api/fleet/enrollment_api_keys
+  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment_api_keys -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
   EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
-    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to list all enrollment_token"
+    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment_api_keys in order to list all enrollment_token"
     return $EXITCODE
   fi
   list=$(echo "$jsonResult" | jq -r '.list')
@@ -205,19 +194,19 @@ Enroll_ElasticAgent() {
     }
   is_active=$(_jq '.active')
   policy_id=$(_jq '.policy_id')
-  if [[ "$is_active" = "true" ]] && [[ "$policy_id" = "$ID" ]]; then
-    POLICY_ID=$(_jq '.id')
+  if [[ "$is_active" = "true" ]] && [[ "$policy_id" = "$POLICY_ID" ]]; then
+    POLICY_ID=$policy_id
     break
   fi
   done
 
-  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment-api-keys/$POLICY_ID \
+  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment_api_keys/$POLICY_ID \
         -H 'Content-Type: application/json' \
         -H 'kbn-xsrf: true' \
         -u "$cred" )
   EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
-    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to retrieve the enrollment_token"
+    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment_api_keys in order to retrieve the enrollment_token"
     return $EXITCODE
   fi
   enrolment_token=$(echo $jsonResult | jq -r '.item.api_key')

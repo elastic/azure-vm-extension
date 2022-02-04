@@ -21,6 +21,7 @@ $subName = "Elastic Agent"
 
 
 $serviceName = 'elastic agent'
+$policyName = 'Azure VM extension policy'
 
 # Install-ElasticAgent function gets es version, downloads correspondent es agent, enrolls it and starts the agent
 function Install-ElasticAgent {
@@ -112,20 +113,10 @@ function Install-ElasticAgent {
                     $azurePolicy = Create-Azure-Policy $keyValue
                 }
                 if (-Not $azurePolicy) {
-                    #query for all agent policies again
-                    $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agent_policies"  -Method 'GET' -Headers $headers -UseBasicParsing
-                    if ($jsonResult.statuscode -eq '200') {
-                        $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "items"
-                        $azurePolicy = Get-AnyActive-Policy $keyValue
-                    } else {
-                        throw "Retrieving the agent policies has failed, api request returned status $jsonResult.statuscode"
-                    }
-                }
-                if (-Not $azurePolicy) {
-                    throw "No active policies were found. Please create a policy in Kibana Fleet"
+                    throw "Failed creating Azure VM extension policy. Please manually create one in Kibana Fleet instead"
                 }
                 Write-Log "Found policy id $azurePolicy" "INFO"
-                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys"  -Method 'GET' -Headers $headers -UseBasicParsing
+                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment_api_keys"  -Method 'GET' -Headers $headers -UseBasicParsing
                 if ($jsonResult.statuscode -eq '200') {
                     $enrollment= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "list"
                     foreach ($policy in $enrollment) {
@@ -137,7 +128,7 @@ function Install-ElasticAgent {
                 } else {
                     throw "Retrieving enrollment api keys has failed, api request returned status $jsonResult.statuscode"
                 }
-                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys/$($policyID)"  -Method 'GET' -Headers $headers -UseBasicParsing
+                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment_api_keys/$($policyID)"  -Method 'GET' -Headers $headers -UseBasicParsing
                 if ($jsonResult.statuscode -eq '200') {
                     $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "item"
                     $enrollmenToken=$keyValue.api_key
