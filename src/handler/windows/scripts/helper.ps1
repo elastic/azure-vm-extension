@@ -478,15 +478,6 @@ function Create-Azure-Policy($content){
     }
 }
 
-# Get-AnyActive-Policy will retrieve any active policy from the list of policies
-function Get-AnyActive-Policy($content){
-    foreach ($policy in $content) {
-        if ($policy.status -eq "active" -And $policy.id -notlike "*elastic-agent-on-cloud*") {
-        return $policy.id
-          }
-    }
-}
-
 #region encryption
 
 # Encrypt will encrypt text based on certificate thumprint

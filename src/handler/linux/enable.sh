@@ -195,7 +195,7 @@ Enroll_ElasticAgent() {
   is_active=$(_jq '.active')
   policy_id=$(_jq '.policy_id')
   if [[ "$is_active" = "true" ]] && [[ "$policy_id" = "$POLICY_ID" ]]; then
-    POLICY_ID=$policy_id
+    POLICY_ID=$(_jq '.id')
     break
   fi
   done

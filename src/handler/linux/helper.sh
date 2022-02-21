@@ -14,7 +14,6 @@ ELASTICSEARCH_URL=""
 STACK_VERSION=""
 KIBANA_URL=""
 POLICY_ID=""
-POLICY_NAME="Azure VM extension policy"
 LINUX_CERT_PATH="/var/lib/waagent"
 IS_NEW_CONFIG=""
 OLD_STACK_VERSION=""
@@ -29,6 +28,7 @@ OLD_PROTECTED_SETTINGS=""
 OLD_THUMBPRINT=""
 IS_FLEET_SERVER=""
 HAS_FLAG_VERSION=""
+POLICY_NAME="Azure VM extension policy"
 
 # checkOS checks distro
 checkOS()
@@ -298,7 +298,7 @@ function retry_backoff() {
 
 # create_azure_policy will create an Azure VM extension policy
 create_azure_policy() {
-  result=$(curl -X POST "${KIBANA_URL}"/api/fleet/agent_policies?sys_monitoring=true -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" -d '{"name":"'"${POLICY_NAME}"'","description":"Dedicated agent policy for Azure VM extension","namespace":"default","monitoring_enabled":["logs","metrics"]}' )
+  result=$(curl -X POST "${KIBANA_URL}"/api/fleet/agent_policies?sys_monitoring=true -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" -d '{"name":"'"$POLICY_NAME"'","description":"Dedicated agent policy for Azure VM extension","namespace":"default","monitoring_enabled":["logs","metrics"]}' )
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
     log "ERROR" "[create_azure_policy] error calling $KIBANA_URL/api/fleet/agent_policies to create Azure VM extension policy $result"

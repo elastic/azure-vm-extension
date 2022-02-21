@@ -19,7 +19,6 @@ $secondOperation = "enrolling elastic agent"
 $message = "Install elastic agent"
 $subName = "Elastic Agent"
 
-
 $serviceName = 'elastic agent'
 $policyName = 'Azure VM extension policy'
 
@@ -113,7 +112,17 @@ function Install-ElasticAgent {
                     $azurePolicy = Create-Azure-Policy $keyValue
                 }
                 if (-Not $azurePolicy) {
-                    throw "Failed creating Azure VM extension policy. Please manually create one in Kibana Fleet instead"
+                    #query for all agent policies again
+                    $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agent_policies"  -Method 'GET' -Headers $headers -UseBasicParsing
+                    if ($jsonResult.statuscode -eq '200') {
+                        $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "items"
+                        $azurePolicy = Get-AnyActive-Policy $keyValue
+                    } else {
+                        throw "Retrieving the agent policies has failed, api request returned status $jsonResult.statuscode"
+                    }
+                }
+                if (-Not $azurePolicy) {
+                    throw "No active policies were found. Please create a policy in Kibana Fleet"
                 }
                 Write-Log "Found policy id $azurePolicy" "INFO"
                 $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys"  -Method 'GET' -Headers $headers -UseBasicParsing
