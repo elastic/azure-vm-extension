@@ -19,8 +19,8 @@ $secondOperation = "enrolling elastic agent"
 $message = "Install elastic agent"
 $subName = "Elastic Agent"
 
-
 $serviceName = 'elastic agent'
+$policyName = 'Azure VM extension policy'
 
 # Install-ElasticAgent function gets es version, downloads correspondent es agent, enrolls it and starts the agent
 function Install-ElasticAgent {
@@ -103,19 +103,41 @@ function Install-ElasticAgent {
                 throw "Enabling Fleet failed with $jsonResult.statuscode"
             }
             # end enable Fleet
-            $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys"  -Method 'GET' -Headers $headers -UseBasicParsing
+            $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agent_policies"  -Method 'GET' -Headers $headers -UseBasicParsing
             if ($jsonResult.statuscode -eq '200') {
-                $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "list"
-                $defaultPolicy = Get-Default-Policy $keyValue
-                if (-Not $defaultPolicy) {
-                    Write-Log "No active Default policy has been found, will select the first active policy instead" "WARN"
-                    $defaultPolicy = Get-AnyActive-Policy $keyValue
+                $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "items"
+                $azurePolicy = Get-Azure-Policy $keyValue
+                if (-Not $azurePolicy) {
+                    Write-Log "No active Azure VM extension policy has been found, create a VM extension policy instead" "WARN"
+                    $azurePolicy = Create-Azure-Policy $keyValue
                 }
-                if (-Not $defaultPolicy) {
+                if (-Not $azurePolicy) {
+                    #query for all agent policies again
+                    $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/agent_policies"  -Method 'GET' -Headers $headers -UseBasicParsing
+                    if ($jsonResult.statuscode -eq '200') {
+                        $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "items"
+                        $azurePolicy = Get-AnyActive-Policy $keyValue
+                    } else {
+                        throw "Retrieving the agent policies has failed, api request returned status $jsonResult.statuscode"
+                    }
+                }
+                if (-Not $azurePolicy) {
                     throw "No active policies were found. Please create a policy in Kibana Fleet"
                 }
-                Write-Log "Found enrollment_token id $defaultPolicy" "INFO"
-                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys/$($defaultPolicy)"  -Method 'GET' -Headers $headers -UseBasicParsing
+                Write-Log "Found policy id $azurePolicy" "INFO"
+                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys"  -Method 'GET' -Headers $headers -UseBasicParsing
+                if ($jsonResult.statuscode -eq '200') {
+                    $enrollment= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "list"
+                    foreach ($policy in $enrollment) {
+                        if ($policy.active -eq "true" -And $policy.policy_id -eq $azurePolicy) {
+                            $policyID = $policy.id
+                            break
+                        }
+                    }
+                } else {
+                    throw "Retrieving enrollment api keys has failed, api request returned status $jsonResult.statuscode"
+                }
+                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys/$($policyID)"  -Method 'GET' -Headers $headers -UseBasicParsing
                 if ($jsonResult.statuscode -eq '200') {
                     $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "item"
                     $enrollmenToken=$keyValue.api_key
@@ -142,7 +164,7 @@ function Install-ElasticAgent {
                     throw "Retrieving the enrollment tokens has failed, api request returned status $jsonResult.statuscode"
                 }
             } else {
-                throw "Retrieving the enrollment token id has failed, api request returned status $jsonResult.statuscode"
+                throw "Retrieving the agent policies has failed, api request returned status $jsonResult.statuscode"
             }
             Write-Log "Setting Env Variable for sequence" "INFO"
             Set-SequenceEnvVariables

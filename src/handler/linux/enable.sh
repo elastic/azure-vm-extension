@@ -160,38 +160,61 @@ Enroll_ElasticAgent() {
     fi
   fi
   #end enable Fleet
-  local enrolment_token=""
-  jsonResult=$(curl "${KIBANA_URL}"/api/fleet/enrollment-api-keys  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
+  #query for all agent policies
+  jsonResult=$(curl -X GET "${KIBANA_URL}"/api/fleet/agent_policies  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
-    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to retrieve the enrolment_token"
+    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/agent_policies in order to retrieve the agent_policies"
     return $EXITCODE
   fi
-  get_default_policy "\${jsonResult}"
+
+  get_azure_policy "\${jsonResult}"
   if [[ "$POLICY_ID" = "" ]]; then
-    log "WARN" "[Enroll_ElasticAgent] Default policy could not be found or is not active. Will select any active policy instead"
-    get_any_active_policy "\${jsonResult}"
+    log "INFO" "[Enroll_ElasticAgent] Azure VM extension policy could not be found or is not active. Will create a VM extension policy instead"
+    create_azure_policy
   fi
+
   if [[ "$POLICY_ID" = "" ]]; then
-    log "ERROR" "[Enroll_ElasticAgent] No active policies were found. Please create a policy in Kibana Fleet"
+    log "ERROR" "[Enroll_ElasticAgent] Failed creating Azure VM extension policy. Please manually create one in Kibana Fleet instead"
     return 1
   fi
+
   log "INFO" "[Enroll_ElasticAgent] policy selected is $POLICY_ID"
+  # get POLICY_ID for /api/fleet/enrollment-api-keys
+  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment-api-keys -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
+  EXITCODE=$?
+  if [ $EXITCODE -ne 0 ]; then
+    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to list all enrollment_token"
+    return $EXITCODE
+  fi
+  list=$(echo "$jsonResult" | jq -r '.list')
+  for row in $(echo "${list}" | jq -r '.[] | @base64'); do
+  _jq() {
+     echo ${row} | base64 --decode | jq -r ${1}
+    }
+  is_active=$(_jq '.active')
+  policy_id=$(_jq '.policy_id')
+  if [[ "$is_active" = "true" ]] && [[ "$policy_id" = "$POLICY_ID" ]]; then
+    POLICY_ID=$(_jq '.id')
+    break
+  fi
+  done
+
   jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment-api-keys/$POLICY_ID \
         -H 'Content-Type: application/json' \
         -H 'kbn-xsrf: true' \
         -u "$cred" )
   EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
-    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to retrieve the enrolment_token"
+    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to retrieve the enrollment_token"
     return $EXITCODE
   fi
-  enrolment_token=$(echo $jsonResult | jq -r '.item.api_key')
-  if [[ "$enrolment_token" = "" ]]; then
-    log "ERROR" "[Enroll_ElasticAgent] enrolment_token could not be found/parsed"
+  enrollment_token=$(echo $jsonResult | jq -r '.item.api_key')
+  if [[ "$enrollment_token" = "" ]]; then
+    log "ERROR" "[Enroll_ElasticAgent] enrollment_token could not be found/parsed"
     return 1
   fi
-  log "INFO" "[Enroll_ElasticAgent] enrolment_token is $enrolment_token"
+  log "INFO" "[Enroll_ElasticAgent] enrollment_token is $enrollment_token"
   log "INFO" "[Enroll_ElasticAgent] Enrolling the Elastic Agent to Fleet ${KIBANA_URL}"
   has_flag_version $STACK_VERSION
   if [[ $IS_FLEET_SERVER = true ]]; then
@@ -207,11 +230,11 @@ Enroll_ElasticAgent() {
     fi
     fleet_server=$(echo $jsonResult | jq -r '.item.fleet_server_hosts[0]')
     log "INFO" "[Enroll_ElasticAgent] Found fleet server $fleet_server"
-    sudo elastic-agent enroll  --url="${fleet_server}" --enrollment-token="$enrolment_token" -f
+    sudo elastic-agent enroll  --url="${fleet_server}" --enrollment-token="$enrollment_token" -f
   elif [[ $HAS_FLAG_VERSION = true  ]]; then
-    sudo elastic-agent enroll  --kibana-url="${KIBANA_URL}" --enrollment-token="$enrolment_token" -f
+    sudo elastic-agent enroll  --kibana-url="${KIBANA_URL}" --enrollment-token="$enrollment_token" -f
   else
-    sudo elastic-agent enroll  "${KIBANA_URL}" "$enrolment_token" -f
+    sudo elastic-agent enroll  "${KIBANA_URL}" "$enrollment_token" -f
   fi
   write_status "$name" "$second_operation" "success" "$message" "$sub_name" "success" "Elastic Agent has been enrolled"
   set_sequence_to_file
