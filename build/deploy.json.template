@@ -13,7 +13,11 @@
     "variables": {
         "publisherName": "",
         "typeName": "",
-        "version": ""
+        "version": "",
+        "regions": ["test"],
+        "supportedOS": "",
+        "mediaLink": "",
+        "isInternalExtension": "true"
     },
     "resources": [
         {
@@ -41,11 +45,11 @@
                 "[concat('Microsoft.Compute/sharedVMExtensions/', variables('publisherName'), '.', variables('typeName'))]"
             ],
             "properties": {
-                "mediaLink": "",
-                "regions": ["test"],
+                "mediaLink": "[variables('mediaLink')]",
+                "regions": "[variables('regions')]",
                 "computeRole": "IaaS",
-                "supportedOS": "",
-                "isInternalExtension": true,
+                "supportedOS": "[variables('supportedOS')]",
+                "isInternalExtension": "[variables('isInternalExtension')]",
                 "safeDeploymentPolicy": "Minimal"
             }
         }
