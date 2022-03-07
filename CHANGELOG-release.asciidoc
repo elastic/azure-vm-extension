@@ -2,7 +2,6 @@
 === Elastic Agent VM extension version 1.2.0.0
 
 - Add dedicated Azure policy for agents installed through the VM extension
-- Elastic stack version dependency: 7.13.0 and later
 
 [[release-notes-1.1.1.0]]
 === Elastic Agent VM extension version 1.1.1.0

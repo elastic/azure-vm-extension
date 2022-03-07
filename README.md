@@ -18,6 +18,16 @@ Once installed, the ElasticAgent VM extension will download the Elastic Agent ar
 | RHEL     | 7+           |
 | Ubuntu   | 16+          |
 
+## Elastic Cloud dependency
+
+To automate the installation and configuration of the Elastic Agent, the Azure VM extension code makes several API calls which requires specific Elastic stack version.
+
+| VM extension version | Elastic Cloud dependency      |
+|----------|--------------|
+| 1.2.0.0 | 7.13.0 or later |
+| 1.1.1.0 | 7.13.0 or later |
+| 1.1.0.0 | 7.13.0 or later |
+| 1.0.0.0 | 7.13.0 or later |
 
 ## Configuration
 
