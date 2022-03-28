@@ -13,7 +13,7 @@ RUN apt-get update && \
 WORKDIR /app
 
 ## this image is build from the .ci folder location
-COPY docker/azure-vm-tools/requirements.txt /app/
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 ENTRYPOINT [ "/app/.ci/docker/azure-vm-tools/entrypoint.sh" ]
