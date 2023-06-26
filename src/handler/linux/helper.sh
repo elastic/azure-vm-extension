@@ -55,7 +55,7 @@ get_logs_location()
    if [ -e $ES_EXT_DIR/HandlerEnvironment.json ]; then
     LOGS_FOLDER=$(jq -r '.[0].handlerEnvironment.logFolder' $ES_EXT_DIR/HandlerEnvironment.json)
   else
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -68,7 +68,7 @@ get_status_location()
 then
     STATUS_FOLDER=$(jq -r '.[0].handlerEnvironment.statusFolder' $ES_EXT_DIR/HandlerEnvironment.json)
 else
-    clean_and_exit
+    clean_and_exit 1
 fi
 }
 
@@ -110,7 +110,7 @@ get_configuration_location()
     log "INFO" "[get_configuration_location] configuration file $CONFIG_FILE found"
   else
     log "ERROR" "[get_configuration_location] HandlerEnvironment.json file not found"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -123,7 +123,7 @@ get_cloud_id()
     log "INFO" "[get_cloud_id] Found cloud id $CLOUD_ID"
   else
     log "[get_cloud_id] Configuration file not found" "ERROR"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -136,7 +136,7 @@ get_protected_settings()
     log "INFO" "[get_protected_settings] Found protected settings"
   else
     log "[get_protected_settings] Configuration file not found" "ERROR"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -149,7 +149,7 @@ get_thumbprint()
     log "INFO" "[get_thumbprint] Found thumbprint $THUMBPRINT"
   else
     log "[get_thumbprint] Configuration file not found" "ERROR"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -162,7 +162,7 @@ get_username()
     log "INFO" "[get_username] Found username  $USERNAME"
   else
     log "ERROR" "[get_username] Configuration file not found"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -177,7 +177,7 @@ get_kibana_host () {
     log "INFO" "[get_kibana_host] Found Kibana uri $KIBANA_URL"
  else
     log "ERROR" "[get_kibana_host] Cloud ID could not be parsed"
-    clean_and_exit
+    clean_and_exit 1
   fi
 
 }
@@ -193,7 +193,7 @@ get_elasticsearch_host () {
     log "INFO" "[get_elasticsearch_host] Found ES uri $ELASTICSEARCH_URL"
   else
     log "ERROR" "[get_elasticsearch_host] Cloud ID could not be parsed"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -203,20 +203,20 @@ get_cloud_stack_version () {
   get_elasticsearch_host
   if [ "$ELASTICSEARCH_URL" = "" ]; then
     log "ERROR" "[get_cloud_stack_version] Elasticsearch URL could not be found"
-    clean_and_exit
+    clean_and_exit 1
   fi
   get_password
   get_base64Auth
    if [ "$PASSWORD" = "" ] && [ "$BASE64_AUTH" = "" ]; then
     log "ERROR" "[get_cloud_stack_version] Both PASSWORD and BASE64AUTH key could not be found"
-    clean_and_exit
+    clean_and_exit 1
   fi
   local cred=""
   if [ "$PASSWORD" != "" ] && [ "$PASSWORD" != "null" ]; then
     get_username
     if [ "$USERNAME" = "" ]; then
       log "ERROR" "[get_cloud_stack_version] USERNAME could not be found"
-      clean_and_exit
+      clean_and_exit 1
     fi
     cred=${USERNAME}:${PASSWORD}
   else
@@ -289,8 +289,7 @@ function retry_backoff() {
     fi
     if [[ $attempt -eq $attempts ]]; then
       log "ERROR" "[retry_backoff] Function failed on last attempt $attempt."
-      # clean_and_exit
-      clean_and_exit
+      clean_and_exit 1
     fi
     local sleep_ms="$(($sleep_millis))"
     sleep "${sleep_ms:0:-3}.${sleep_ms: -3}"
@@ -360,8 +359,7 @@ write_status() {
       sequenceNumber=$(echo $filename | cut -f1 -d.)
     else
       log "[write_status] Configuration file not found" "ERROR"
-      # clean_and_exit
-      clean_and_exit
+      clean_and_exit 1
     fi
   json="[{\"version\":\"1.0\",\"timestampUTC\":\"$timestampUTC\",\"status\":{\"name\":\"$name\",\"operation\":\"$operation\",\"status\":\"$mainStatus\",\"formattedMessage\": { \"lang\":\"en-US\", \"message\":\"$message\"},\"substatus\": [{ \"name\":\"$subName\", \"status\":\"$subStatus\",\"code\":\"$code\",\"formattedMessage\": { \"lang\":\"en-US\", \"message\":\"$subMessage\"}}]}} ]"
   echo $json > "$STATUS_FOLDER"/"$sequenceNumber".status
@@ -376,8 +374,7 @@ encrypt() {
     openssl cms -encrypt -in <(echo "$2") -inkey $private_key_path -recip $cert_path -inform dem
   else
     echo "ERROR" "[decrypt] Decryption failed. Could not find certificates"
-    # clean_and_exit
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -392,8 +389,7 @@ get_password() {
     PASSWORD=$(echo "$protected_settings" | jq -r '.password')
   else
     log "ERROR" "[get_password] Decryption failed. Could not find certificates"
-    # clean_and_exit
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -408,8 +404,7 @@ get_base64Auth() {
     BASE64_AUTH=$(echo "${protected_settings}" | jq -r '.base64Auth')
   else
     log "ERROR" "[get_base64Auth] Decryption failed. Could not find certificates"
-    # clean_and_exit
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -425,8 +420,7 @@ is_new_config(){
     newSequence=$(echo $filename | cut -f1 -d.)
   else
     log "[get_sequence] Configuration file not found" "ERROR"
-    # clean_and_exit
-    clean_and_exit
+    clean_and_exit 1
   fi
   if [ "$LOGS_FOLDER" = "" ]; then
       get_logs_location
@@ -480,7 +474,7 @@ function set_sequence_to_file
     log "INFO" "[set_sequence_to_file] Sequence has been set"
   else
     log "[set_sequence_to_file] Configuration file not found" "ERROR"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -498,7 +492,7 @@ get_prev_configuration_location()
     log "INFO" "[get_prev_configuration_location] configuration file $OLD_CONFIG_FILE found"
   else
     log "ERROR" "[get_prev_configuration_location] HandlerEnvironment.json file not found"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -511,7 +505,7 @@ get_prev_username()
     log "INFO" "[get_prev_username] Found username  OLD_USERNAME"
   else
     log "ERROR" "[get_prev_username] Configuration file not found"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -524,7 +518,7 @@ get_prev_cloud_id()
     log "INFO" "[get_prev_cloud_id] Found cloud id $OLD_CLOUD_ID"
   else
     log "[get_prev_cloud_id] Configuration file not found" "ERROR"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -539,7 +533,7 @@ get_prev_kibana_host () {
     log "INFO" "[get_prev_kibana_host] Found Kibana uri $OLD_KIBANA_URL"
  else
     log "ERROR" "[get_prev_kibana_host] Cloud ID could not be parsed"
-    clean_and_exit
+    clean_and_exit 1
   fi
 
 }
@@ -555,7 +549,7 @@ get_prev_elasticsearch_host () {
     log "INFO" "[get_prev_elasticsearch_host] Found ES uri $OLD_ELASTICSEARCH_URL"
   else
     log "ERROR" "[get_prev_elasticsearch_host] Cloud ID could not be parsed"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -568,7 +562,7 @@ get_prev_protected_settings()
     log "INFO" "[get_prev_protected_settings] Found protected settings $OLD_PROTECTED_SETTINGS"
   else
     log "[get_prev_protected_settings] Configuration file not found" "ERROR"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -581,7 +575,7 @@ get_prev_thumbprint()
     log "INFO" "[get_prev_thumbprint] Found thumbprint $OLD_THUMBPRINT"
   else
     log "[get_prev_thumbprint] Configuration file not found" "ERROR"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -597,7 +591,7 @@ get_prev_password() {
     OLD_PASSWORD=$(echo "$protected_settings" | jq -r '.password')
   else
     log "ERROR" "[get_prev_password] Decryption failed. Could not find certificates"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -612,7 +606,7 @@ get_prev_base64Auth() {
     OLD_BASE64_AUTH=$(echo "${protected_settings}" | jq -r '.base64Auth')
   else
     log "ERROR" "[get_prev_base64Auth] Decryption failed. Could not find certificates"
-    clean_and_exit
+    clean_and_exit 1
   fi
 }
 
@@ -622,20 +616,20 @@ get_prev_cloud_stack_version () {
   get_prev_elasticsearch_host
   if [ "$OLD_ELASTICSEARCH_URL" = "" ]; then
     log "ERROR" "[get_prev_cloud_stack_version] Elasticsearch URL could not be found"
-    clean_and_exit
+    clean_and_exit 1
   fi
   get_prev_password
   get_prev_base64Auth
    if [ "$OLD_PASSWORD" = "" ] && [ "$OLD_BASE64_AUTH" = "" ]; then
     log "ERROR" "[get_prev_cloud_stack_version] Both PASSWORD and BASE64AUTH key could not be found"
-    clean_and_exit
+    clean_and_exit 1
   fi
   local cred=""
   if [ "$OLD_PASSWORD" != "" ] && [ "$OLD_PASSWORD" != "null" ]; then
     get_prev_username
     if [ "$OLD_USERNAME" = "" ]; then
       log "ERROR" "[get_prev_cloud_stack_version] USERNAME could not be found"
-      clean_and_exit
+      clean_and_exit 1
     fi
     cred=${OLD_USERNAME}:${OLD_PASSWORD}
   else
