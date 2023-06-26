@@ -114,8 +114,6 @@ Install_ElasticAgent_OTHER()
     log "INFO" "[Install_ElasticAgent_OTHER] installed Elastic Agent $STACK_VERSION"
 }
 
-
-
 # Enroll_ElasticAgent enrolls the elastic agent to Fleet
 Enroll_ElasticAgent() {
   get_kibana_host
@@ -347,12 +345,10 @@ Run_Agent()
   if [ "$DISTRO_OS" = "DEB" ] || [ "$DISTRO_OS" = "RPM" ]; then
     Run_Agent_DEB_RPM
   else
-   Run_Agent_Other
+    Run_Agent_Other
   fi
+
+  clean_and_exit 0
 }
 
 Run_Agent
-
-
-
-

@@ -38,7 +38,7 @@ elif [ -f /etc/debian_version ]; then
     DISTRO_VERSION=$(cat /etc/debian_version)
 elif [ -f /etc/SuSe-release ]; then
     echo -e "Unsupported OS"
-    exit 51
+    clean_and_exit 51
 #elif [ -f /etc/redhat-release ]; then
     # Older Red Hat, CentOS, etc.
 else
@@ -54,11 +54,11 @@ install_dependencies() {
   distro=${DISTRO_NAME,,}
   if [[ "$distro" = "sles" ]] || [[ "$distro" = *"suse"* ]] || [[ "$distro" = *"flatcar"* ]] ; then
     echo -e "Unsupported OS"
-    exit 51
+    clean_and_exit 51
   fi
   if [[ $distro == "redhat"* && $DISTRO_VERSION == "6"* ]] || [[ $distro == "red hat"* && $DISTRO_VERSION == "6"* ]] ; then
     echo -e "Unsupported OS"
-    exit 51
+    clean_and_exit 51
   fi
   log "distro: $DISTRO_NAME version: $DISTRO_VERSION" "INFO"
   if dpkg -S /bin/ls >/dev/null 2>&1; then

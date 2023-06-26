@@ -180,7 +180,8 @@ function Install-ElasticAgent {
                 Write-Log $_.ScriptStackTrace "ERROR"
                 # write status for fail
                 Write-Status "$name" "$firstOperation" "error" "$message" "$subName" "error" "Elastic Agent has not been installed"
-                exit 1
+                # exit 1
+                Clean-And-Exit 1
             } else {
                 Write-Log "Elastic Agent installation failed. retrying in 20s" "ERROR"
                 Write-Log $_ "ERROR"
@@ -211,7 +212,8 @@ function Enable-ElasticAgent {
                 Write-Log $_ "ERROR"
                 Write-Log $_.ScriptStackTrace "ERROR"
                 Write-Status "$nameE" "$operationE" "error" "$messageE" "$subName" "error" "Elastic Agent service has not started"
-                exit 1
+                # exit 1
+                Clean-And-Exit 1
             } else {
                 Write-Log "Starting the Elastic Agent has failed. retrying in 20s" "ERROR"
                 Write-Log $_ "ERROR"
@@ -244,7 +246,8 @@ function Reconfigure-ElasticAgent {
                 Write-Log $_ "ERROR"
                 Write-Log $_.ScriptStackTrace "ERROR"
                 Write-Status "$nameE" "$operationE" "error" "$messageE" "$subName" "error" "Elastic Agent service has not been reconfigured"
-                exit 1
+                # exit 1
+                Clean-And-Exit 1
             } else {
                 Write-Log "Starting the Elastic Agent has failed. retrying in 20s" "ERROR"
                 Write-Log $_ "ERROR"
@@ -273,3 +276,4 @@ If (Get-Service $serviceName -ErrorAction SilentlyContinue) {
     Enable-ElasticAgent
 }
 
+Clean-And-Exit 0
