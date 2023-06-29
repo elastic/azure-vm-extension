@@ -120,7 +120,7 @@ Save this **Blob SAS URL** somewhere safe; we'll use it in the next step as [MED
 
 Update the template file with the appropriate [PUBLISHER NAME], [PUBLISHER TYPE], and [IS INTERNAL EXTENSION] for the deployment target (test or production). 
 
-Replace [EXTENSION VERSION] with the extension version.
+Replace [EXTENSION VERSION] with the extension version. **Important**: use three digits versions for test (i.e., 1.3.0) and four digit versions for production (i.e., 1.3.0.0).
 
 Replace [MEDIA LINK] with the value of **Blob SAS URL** you saved during the previous step.
 
