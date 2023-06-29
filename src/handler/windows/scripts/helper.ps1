@@ -880,3 +880,21 @@ function Get-Prev-Stack-Version {
     }
     return ""
 }
+
+# Clean-And-Exit cleans up the config file and exits
+function Clean-And-Exit($exitCode) {
+    $powershellVersion = Get-PowershellVersion
+    Try 
+    {
+        $azureConfigFile = Get-Azure-Latest-Config-File($powershellVersion)
+        Set-Content -Path $azureConfigFile -Value "{}"
+    }
+    Catch
+    {
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName
+        Write-Log "Failed to clear config file: $FailedItem. The error message was $ErrorMessage" "ERROR"
+    }
+
+    exit $exitCode
+}
