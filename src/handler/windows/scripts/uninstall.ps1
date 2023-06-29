@@ -24,6 +24,11 @@ function Uninstall-ElasticAgent {
     $completed = $false
     while (-not $completed) {
         Try {
+            # Agent unenrollment is temporary removed from the uninstall script. It will be 
+            # added back in a future release.
+            #
+            # To learn more, see https://github.com/elastic/azure-vm-extension/pull/88
+            #
             Write-Log "Uninstalling Elastic Agent" "INFO"
             & "$INSTALL_LOCATION\Elastic\Agent\elastic-agent.exe" uninstall --force
             Write-Log "Elastic Agent has been uninstalled" "INFO"

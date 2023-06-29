@@ -42,7 +42,12 @@ Uninstall_ElasticAgent_DEB_RPM() {
 # Uninstall_ElasticAgent checks distro and removes installation of the elastic agent
 Uninstall_ElasticAgent()
 {
-  # log "INFO" "[Uninstall_ElasticAgent] Uninstalling Elastic Agent"
+  # Agent unenrollment is temporary removed from the uninstall script. It will be 
+  # added back in a future release.
+  #
+  # To learn more, see https://github.com/elastic/azure-vm-extension/pull/88
+  #
+  log "INFO" "[Uninstall_ElasticAgent] Uninstalling Elastic Agent"
   if [ "$DISTRO_OS" = "DEB" ] || [ "$DISTRO_OS" = "RPM" ]; then
     retry_backoff Uninstall_ElasticAgent_DEB_RPM
   else
