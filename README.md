@@ -24,6 +24,7 @@ To automate the installation and configuration of the Elastic Agent, the Azure V
 
 | VM extension version | Elastic Cloud dependency      |
 |----------|--------------|
+| 1.3.0.0 | 7.13.0 or later |
 | 1.2.0.0 | 7.13.0 or later |
 | 1.1.1.0 | 7.13.0 or later |
 | 1.1.0.0 | 7.13.0 or later |
