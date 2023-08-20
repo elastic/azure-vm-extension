@@ -55,6 +55,7 @@ Example installation from CLI:
 
 For Linux based VM's users will need to install the ElasticAgent.linux VM extension.
 
+
 Example installation from CLI:
 ```
  az vm extension set -n ElasticAgent.linux --publisher Elastic --version {version number} --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'
