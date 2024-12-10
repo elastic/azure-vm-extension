@@ -61,7 +61,7 @@ install_dependencies() {
     clean_and_exit 51
   fi
   log "distro: $DISTRO_NAME version: $DISTRO_VERSION" "INFO"
-  if dpkg -S /bin/ls >/dev/null 2>&1; then
+  if dpkg -S /bin/ls >/dev/null 2>&1 || dpkg -S /usr/bin/ls >/dev/null 2>&1; then
     log "[install_dependencies] distro is Debian" "INFO"
     sudo apt-get update
     if [ $(dpkg-query -W -f='${Status}' curl 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
