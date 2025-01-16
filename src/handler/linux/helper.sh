@@ -33,7 +33,7 @@ POLICY_NAME="Azure VM extension policy"
 # checkOS checks distro
 checkOS()
 {
-  if dpkg -S /bin/ls >/dev/null 2>&1 || dpkg -S /usr/bin/ls >/dev/null 2>&1; then
+  if dpkg -S /bin/ls >/dev/null 2>&1 || dpkg -S /usr/bin/ls >/dev/null 2>&1
   then
     DISTRO_OS="DEB"
     echo "[checkOS] distro is $DISTRO_OS" "INFO"
