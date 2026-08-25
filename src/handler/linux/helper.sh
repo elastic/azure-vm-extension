@@ -10,6 +10,7 @@ CLOUD_ID=""
 USERNAME=""
 PASSWORD=""
 BASE64_AUTH=""
+API_KEY=""
 ELASTICSEARCH_URL=""
 STACK_VERSION=""
 KIBANA_URL=""
@@ -22,6 +23,7 @@ OLD_KIBANA_URL=""
 OLD_USERNAME=""
 OLD_PASSWORD=""
 OLD_BASE64_AUTH=""
+OLD_API_KEY=""
 OLD_CONFIG_FILE=""
 OLD_CLOUD_ID=""
 OLD_PROTECTED_SETTINGS=""
@@ -29,6 +31,36 @@ OLD_THUMBPRINT=""
 IS_FLEET_SERVER=""
 HAS_FLAG_VERSION=""
 POLICY_NAME="Azure VM extension policy"
+AUTHORIZATION_HEADER=""
+
+# set_auth_header selects API key authentication first, then the existing Basic
+# authentication settings. The API key is the encoded value returned by the
+# Elasticsearch create API key API.
+set_auth_header() {
+  local api_key="${1}"
+  local username="${2}"
+  local password="${3}"
+  local base64_auth="${4}"
+  AUTHORIZATION_HEADER=""
+
+  if [[ "$api_key" != "" ]] && [[ "$api_key" != "null" ]]; then
+    AUTHORIZATION_HEADER="Authorization: ApiKey $api_key"
+  elif [[ "$password" != "" ]] && [[ "$password" != "null" ]] && [[ "$username" != "" ]] && [[ "$username" != "null" ]]; then
+    local encoded_basic_auth
+    encoded_basic_auth=$(printf '%s' "$username:$password" | base64 | tr -d '\n') || return 1
+    AUTHORIZATION_HEADER="Authorization: Basic $encoded_basic_auth"
+  elif [[ "$base64_auth" != "" ]] && [[ "$base64_auth" != "null" ]]; then
+    AUTHORIZATION_HEADER="Authorization: Basic $base64_auth"
+  else
+    return 1
+  fi
+}
+
+# authenticated_curl supplies credentials over standard input so secrets are
+# not exposed in curl's process arguments.
+authenticated_curl() {
+  printf 'header = "%s"\n' "$AUTHORIZATION_HEADER" | curl --config - "$@"
+}
 
 # checkOS checks distro
 checkOS()
@@ -205,24 +237,17 @@ get_cloud_stack_version () {
     log "ERROR" "[get_cloud_stack_version] Elasticsearch URL could not be found"
     clean_and_exit 1
   fi
+  get_api_key
   get_password
   get_base64Auth
-   if [ "$PASSWORD" = "" ] && [ "$BASE64_AUTH" = "" ]; then
-    log "ERROR" "[get_cloud_stack_version] Both PASSWORD and BASE64AUTH key could not be found"
-    clean_and_exit 1
-  fi
-  local cred=""
   if [ "$PASSWORD" != "" ] && [ "$PASSWORD" != "null" ]; then
     get_username
-    if [ "$USERNAME" = "" ]; then
-      log "ERROR" "[get_cloud_stack_version] USERNAME could not be found"
-      clean_and_exit 1
-    fi
-    cred=${USERNAME}:${PASSWORD}
-  else
-    cred=$(echo "$BASE64_AUTH" | base64 --decode)
   fi
-  json_result=$(curl "${ELASTICSEARCH_URL}"  -H 'Content-Type: application/json' -u $cred)
+  if ! set_auth_header "$API_KEY" "$USERNAME" "$PASSWORD" "$BASE64_AUTH"; then
+    log "ERROR" "[get_cloud_stack_version] API key or Basic credentials could not be found"
+    clean_and_exit 1
+  fi
+  json_result=$(authenticated_curl "${ELASTICSEARCH_URL}" -H 'Content-Type: application/json')
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
       log "ERROR" "[get_cloud_stack_version] error pinging $ELASTICSEARCH_URL"
@@ -298,7 +323,7 @@ function retry_backoff() {
 
 # create_azure_policy will create an Azure VM extension policy
 create_azure_policy() {
-  result=$(curl -X POST "${KIBANA_URL}"/api/fleet/agent_policies?sys_monitoring=true -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" -d '{"name":"'"$POLICY_NAME"'","description":"Dedicated agent policy for Azure VM extension","namespace":"default","monitoring_enabled":["logs","metrics"]}' )
+  result=$(authenticated_curl -X POST "${KIBANA_URL}"/api/fleet/agent_policies?sys_monitoring=true -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -d '{"name":"'"$POLICY_NAME"'","description":"Dedicated agent policy for Azure VM extension","namespace":"default","monitoring_enabled":["logs","metrics"]}' )
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
     log "ERROR" "[create_azure_policy] error calling $KIBANA_URL/api/fleet/agent_policies to create Azure VM extension policy $result"
@@ -404,6 +429,21 @@ get_base64Auth() {
     BASE64_AUTH=$(echo "${protected_settings}" | jq -r '.base64Auth')
   else
     log "ERROR" "[get_base64Auth] Decryption failed. Could not find certificates"
+    clean_and_exit 1
+  fi
+}
+
+# get_api_key retrieves the encoded Elasticsearch API key from protected settings
+get_api_key() {
+  get_protected_settings
+  get_thumbprint
+  cert_path="$LINUX_CERT_PATH/$THUMBPRINT.crt"
+  private_key_path="$LINUX_CERT_PATH/$THUMBPRINT.prv"
+  if [[ -f "$cert_path" ]] && [[ -f "$private_key_path" ]]; then
+    protected_settings=$(openssl cms -decrypt -in <(echo "$PROTECTED_SETTINGS" | base64 --decode) -inkey "$private_key_path" -recip "$cert_path" -inform dem)
+    API_KEY=$(echo "${protected_settings}" | jq -r '.apiKey')
+  else
+    log "ERROR" "[get_api_key] Decryption failed. Could not find certificates"
     clean_and_exit 1
   fi
 }
@@ -610,6 +650,21 @@ get_prev_base64Auth() {
   fi
 }
 
+# get_prev_api_key retrieves the encoded API key from previous protected settings
+get_prev_api_key() {
+  get_prev_protected_settings
+  get_prev_thumbprint
+  cert_path="$LINUX_CERT_PATH/$OLD_THUMBPRINT.crt"
+  private_key_path="$LINUX_CERT_PATH/$OLD_THUMBPRINT.prv"
+  if [[ -f "$cert_path" ]] && [[ -f "$private_key_path" ]]; then
+    protected_settings=$(openssl cms -decrypt -in <(echo "$OLD_PROTECTED_SETTINGS" | base64 --decode) -inkey "$private_key_path" -recip "$cert_path" -inform dem)
+    OLD_API_KEY=$(echo "${protected_settings}" | jq -r '.apiKey')
+  else
+    log "ERROR" "[get_prev_api_key] Decryption failed. Could not find certificates"
+    clean_and_exit 1
+  fi
+}
+
 # get_prev_cloud_stack_version retrieves previous stack version
 get_prev_cloud_stack_version () {
   log "INFO" "[get_prev_cloud_stack_version] Get ES cluster URL"
@@ -618,24 +673,17 @@ get_prev_cloud_stack_version () {
     log "ERROR" "[get_prev_cloud_stack_version] Elasticsearch URL could not be found"
     clean_and_exit 1
   fi
+  get_prev_api_key
   get_prev_password
   get_prev_base64Auth
-   if [ "$OLD_PASSWORD" = "" ] && [ "$OLD_BASE64_AUTH" = "" ]; then
-    log "ERROR" "[get_prev_cloud_stack_version] Both PASSWORD and BASE64AUTH key could not be found"
-    clean_and_exit 1
-  fi
-  local cred=""
   if [ "$OLD_PASSWORD" != "" ] && [ "$OLD_PASSWORD" != "null" ]; then
     get_prev_username
-    if [ "$OLD_USERNAME" = "" ]; then
-      log "ERROR" "[get_prev_cloud_stack_version] USERNAME could not be found"
-      clean_and_exit 1
-    fi
-    cred=${OLD_USERNAME}:${OLD_PASSWORD}
-  else
-    cred=$(echo "$OLD_BASE64_AUTH" | base64 --decode)
   fi
-  json_result=$(curl "${OLD_ELASTICSEARCH_URL}"  -H 'Content-Type: application/json' -u $cred)
+  if ! set_auth_header "$OLD_API_KEY" "$OLD_USERNAME" "$OLD_PASSWORD" "$OLD_BASE64_AUTH"; then
+    log "ERROR" "[get_prev_cloud_stack_version] API key or Basic credentials could not be found"
+    clean_and_exit 1
+  fi
+  json_result=$(authenticated_curl "${OLD_ELASTICSEARCH_URL}" -H 'Content-Type: application/json')
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
       log "ERROR" "[get_prev_cloud_stack_version] error pinging $OLD_ELASTICSEARCH_URL"
