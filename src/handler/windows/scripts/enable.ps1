@@ -62,29 +62,15 @@ function Install-ElasticAgent {
             if (-Not $kibanaUrl) {
                 throw "Kibana url could not be found"
             }
+            $apiKey = Get-ApiKey $powershellVersion
             $password = Get-Password $powershellVersion
             $base64Auth = Get-Base64Auth $powershellVersion
-            if (-Not $password -And -Not $base64Auth) {
-                throw "Password  or base64auto key could not be found"
-            }
             Write-Log "Found Kibana url $kibanaUrl" "INFO"
-            $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-            $headers.Add("kbn-xsrf", "true")
-            $encodedCredentials = ""
+            $username = ""
             if ($password) {
                 $username = Get-Username $powershellVersion
-                if (-Not $username) {
-                    throw "Username could not be found"
-                }
-                $pair = "$($username):$($password)"
-                $encodedCredentials = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
-            } else {
-                $encodedCredentials = $base64Auth
             }
-            $headers.Add('Authorization', "Basic $encodedCredentials")
-            if ( $powershellVersion -gt 3 ) {
-                $headers.Add("Accept","application/json")
-            }
+            $headers = New-AuthorizationHeaders $apiKey $username $password $base64Auth $true
             #enable Fleet
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/setup"  -Method 'POST' -Headers $headers -UseBasicParsing

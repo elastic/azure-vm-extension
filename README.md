@@ -36,12 +36,18 @@ To automate the installation and configuration of the Elastic Agent, the Azure V
 For a successful installation the following configuration settings are required:
 
 Public settings:
- - username - a valid username that can have access to the elastic cloud cluster
  - cloudId - the elastic cloud ID (deployment ID)
+ - username - a valid username that can access the elastic cloud cluster (only required for username/password authentication)
 
 Protected settings:
- - password - a valid password that can be used in combination with the username public setting to access the elastic cloud cluster
+ - apiKey - the encoded value returned by the Elasticsearch create API key API
+ - password - a valid password used with the username public setting
+ - base64Auth - base64-encoded `username:password` credentials
 
+The extension prefers `apiKey` when present and falls back to the existing
+username/password or `base64Auth` Basic authentication settings. The API key
+requires the Elasticsearch `monitor` cluster privilege and Kibana Fleet `All`
+privilege.
 
 ## Managing the Elastic Agent VM extensions
 
@@ -54,9 +60,23 @@ Example installation from CLI:
  az vm extension set -n ElasticAgent.windows --publisher Elastic --version {version number} --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'
 ```
 
+API key authentication:
+
+Store `{"apiKey":"<encoded API key>"}` in a permission-restricted
+`protected-settings.json` file rather than placing the secret in shell history.
+
+```
+ az vm extension set -n ElasticAgent.windows --publisher Elastic --version {version number} --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings @protected-settings.json --settings '{\"cloudId\":\"{elastic cloud ID}\"}'
+```
+
 For Linux based VM's users will need to install the ElasticAgent.linux VM extension.
 
 Example installation from CLI:
 ```
  az vm extension set -n ElasticAgent.linux --publisher Elastic --version {version number} --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'
+```
+
+API key authentication:
+```
+ az vm extension set -n ElasticAgent.linux --publisher Elastic --version {version number} --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings @protected-settings.json --settings '{\"cloudId\":\"{elastic cloud ID}\"}'
 ```
