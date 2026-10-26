@@ -48,7 +48,7 @@ get_kibana_host() {
   KIBANA_URL="https://kibana.example.test"
 }
 get_api_key() {
-  API_KEY="encoded-api-key"
+  API_KEY="aWQ6dGVzdC1hcGkta2V5"
 }
 get_password() {
   PASSWORD="fallback-password"
@@ -94,14 +94,14 @@ done <<EOF
 $expected_paths
 EOF
 
-if grep -v 'Authorization: ApiKey encoded-api-key' "$curl_log" >/dev/null; then
+if grep -v 'Authorization: ApiKey aWQ6dGVzdC1hcGkta2V5' "$curl_log" >/dev/null; then
   fail "every Fleet request must use API key authentication"
 fi
 
 while IFS= read -r request; do
   request_args=${request%%|*}
   case "$request_args" in
-    *"encoded-api-key"*) fail "API key must not appear in curl process arguments" ;;
+    *"aWQ6dGVzdC1hcGkta2V5"*) fail "API key must not appear in curl process arguments" ;;
     *) ;;
   esac
 done <"$curl_log"

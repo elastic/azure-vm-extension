@@ -21,9 +21,9 @@ assert_auth_header() {
   fi
 }
 
-set_auth_header "encoded-api-key" "fallback-user" "fallback-password" \
+set_auth_header "aWQ6dGVzdC1hcGkta2V5" "fallback-user" "fallback-password" \
   "$(printf 'base64-user:base64-password' | base64)"
-assert_auth_header "Authorization: ApiKey encoded-api-key" \
+assert_auth_header "Authorization: ApiKey aWQ6dGVzdC1hcGkta2V5" \
   "API key takes precedence over Basic credentials"
 
 set_auth_header "" "fallback-user" "fallback-password" ""
@@ -40,6 +40,24 @@ if set_auth_header "" "" "" ""; then
   fail "missing credentials must be rejected"
 fi
 
+# Accept standard Base64 with no padding, either padding length, and +/.
+for api_key in 'aWQ6a2V5' 'aWQ6YWI=' 'aWQ6YQ==' 'aWQ6fn5+' 'aWQ6Pz8/'; do
+  set_auth_header "$api_key" "" "" ""
+  assert_auth_header "Authorization: ApiKey $api_key" \
+    "valid Base64 API keys must be accepted"
+done
+
+# A malformed explicit key must fail even when Basic credentials are available.
+for api_key in 'encoded-api-key' 'YWJ' 'A===' 'AA=A' 'YWJj====' \
+  'YW Jj' $'YWJj\t' $'YWJj\r' $'YWJj\n' 'YWJj"' 'YWJj\' \
+  $'YWJj"\nheader = "X-Injected: yes'; do
+  set_auth_header 'aWQ6a2V5' "" "" ""
+  if set_auth_header "$api_key" "fallback-user" "fallback-password" "$encoded_basic"; then
+    fail "malformed API keys must be rejected without Basic-auth fallback"
+  fi
+  assert_auth_header "" "rejected API keys must clear the previous header"
+done
+
 curl_stdin=$(mktemp)
 curl_log=$(mktemp)
 trap 'rm -f "$curl_stdin" "$curl_log"' EXIT
@@ -49,16 +67,16 @@ curl() {
   printf '%s\n' '{"version":{"number":"8.19.20"}}'
 }
 
-set_auth_header "encoded-api-key" "" "" ""
+set_auth_header "aWQ6dGVzdC1hcGkta2V5" "" "" ""
 authenticated_curl "https://elasticsearch.example.test" >/dev/null
 curl_args=$(<"$curl_log")
 curl_input=$(<"$curl_stdin")
 case "$curl_args" in
-  *"encoded-api-key"*) fail "API key must not appear in curl process arguments" ;;
+  *"aWQ6dGVzdC1hcGkta2V5"*) fail "API key must not appear in curl process arguments" ;;
   *) ;;
 esac
 case "$curl_input" in
-  *"Authorization: ApiKey encoded-api-key"*) ;;
+  *"Authorization: ApiKey aWQ6dGVzdC1hcGkta2V5"*) ;;
   *) fail "curl must receive the API key header through standard input" ;;
 esac
 
@@ -71,7 +89,7 @@ get_elasticsearch_host() {
   ELASTICSEARCH_URL="https://elasticsearch.example.test"
 }
 get_api_key() {
-  API_KEY="encoded-api-key"
+  API_KEY="aWQ6dGVzdC1hcGkta2V5"
 }
 get_password() {
   PASSWORD="fallback-password"
@@ -87,11 +105,11 @@ get_cloud_stack_version
 curl_args=$(<"$curl_log")
 curl_input=$(<"$curl_stdin")
 case "$curl_args" in
-  *"encoded-api-key"*) fail "version discovery exposes the API key in process arguments" ;;
+  *"aWQ6dGVzdC1hcGkta2V5"*) fail "version discovery exposes the API key in process arguments" ;;
   *) ;;
 esac
 case "$curl_input" in
-  *"Authorization: ApiKey encoded-api-key"*) ;;
+  *"Authorization: ApiKey aWQ6dGVzdC1hcGkta2V5"*) ;;
   *) fail "Elasticsearch version discovery must use API key authentication" ;;
 esac
 
