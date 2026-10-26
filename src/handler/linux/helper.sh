@@ -44,6 +44,9 @@ set_auth_header() {
   AUTHORIZATION_HEADER=""
 
   if [[ "$api_key" != "" ]] && [[ "$api_key" != "null" ]]; then
+    if [[ ! "$api_key" =~ ^[A-Za-z0-9+/]+={0,2}$ ]] || (( ${#api_key} % 4 != 0 )); then
+      return 1
+    fi
     AUTHORIZATION_HEADER="Authorization: ApiKey $api_key"
   elif [[ "$password" != "" ]] && [[ "$password" != "null" ]] && [[ "$username" != "" ]] && [[ "$username" != "null" ]]; then
     local encoded_basic_auth
