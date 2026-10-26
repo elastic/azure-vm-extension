@@ -43,6 +43,32 @@ function Get-Username($powershellVersion) {
     return ""
 }
 
+# New-AuthorizationHeaders selects API key authentication first, then the
+# existing Basic authentication settings.
+function New-AuthorizationHeaders($ApiKey, $Username, $Password, $Base64Auth, $IncludeXsrf) {
+    $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+    if ($IncludeXsrf) {
+        $headers.Add("kbn-xsrf", "true")
+    }
+    if ((Get-PowershellVersion) -gt 3) {
+        $headers.Add("Accept", "application/json")
+    }
+
+    if ($ApiKey) {
+        $headers.Add("Authorization", "ApiKey $ApiKey")
+    } elseif ($Password -And $Username) {
+        $pair = "$($Username):$($Password)"
+        $encodedCredentials = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+        $headers.Add("Authorization", "Basic $encodedCredentials")
+    } elseif ($Base64Auth) {
+        $headers.Add("Authorization", "Basic $Base64Auth")
+    } else {
+        throw "API key or Basic credentials could not be found"
+    }
+
+    return $headers
+}
+
 # Get-Elasticsearch-URL retrieves the es url by encoding and parsing the cloudID value
 function Get-Elasticsearch-URL($powershellVersion) {
   $powershellVersion = Get-PowershellVersion
@@ -77,28 +103,14 @@ function Get-Stack-Version {
   if (-Not $elasticsearchUrl) {
       throw "Elasticsearch URL could not be found"
   }
+  $apiKey = Get-ApiKey $powershellVersion
   $password = Get-Password $powershellVersion
   $base64Auth = Get-Base64Auth $powershellVersion
-  if (-Not $password -And -Not $base64Auth) {
-      throw "Password  or base64auto key could not be found"
-  }
-  $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-  if ( $powershellVersion -gt 3 ) {
-      $headers.Add("Accept","application/json")
-  }
-  #cred
-  $encodedCredentials = ""
+  $username = ""
   if ($password) {
       $username = Get-Username $powershellVersion
-      if (-Not $username) {
-          throw "Username could not be found"
-      }
-      $pair = "$($username):$($password)"
-      $encodedCredentials = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
-  } else {
-      $encodedCredentials = $base64Auth
   }
-  $headers.Add('Authorization', "Basic $encodedCredentials")
+  $headers = New-AuthorizationHeaders $apiKey $username $password $base64Auth $false
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
   $jsonResult = Invoke-WebRequest -Uri "$($elasticsearchUrl)"  -Method 'GET' -Headers $headers -UseBasicParsing
   if ($jsonResult.statuscode -eq '200') {
@@ -438,23 +450,11 @@ function Get-Azure-Policy($content){
 
 # Create-Azure-Policy creates a dedicated Azure VM extension policy
 function Create-Azure-Policy($content){
-    $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-    $headers.Add("kbn-xsrf", "true")
-    $encodedCredentials = ""
+    $username = ""
     if ($password) {
         $username = Get-Username $powershellVersion
-        if (-Not $username) {
-            throw "Username could not be found"
-        }
-        $pair = "$($username):$($password)"
-        $encodedCredentials = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
-    } else {
-        $encodedCredentials = $base64Auth
     }
-    $headers.Add('Authorization', "Basic $encodedCredentials")
-    if ( $powershellVersion -gt 3 ) {
-        $headers.Add("Accept","application/json")
-    }
+    $headers = New-AuthorizationHeaders $apiKey $username $password $base64Auth $true
 
     $Body = @{
         name = $policyName
@@ -578,6 +578,36 @@ function Get-Base64Auth($powershellVersion) {
                 else {
                     $ser = New-Object System.Web.Script.Serialization.JavaScriptSerializer
                     $value = $ser.DeserializeObject($normalizedJsonKeys).base64Auth
+                }
+                Return $value
+            }
+        }
+    }
+    Catch
+    {
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName
+        Write-Log "Failed to read file: $FailedItem. The error message was $ErrorMessage" "ERROR"
+        throw "Error in Get-ProtectedSettings-From-Config-Json. Couldn't parse configuration file"
+    }
+}
+
+# Get-ApiKey retrieves the encoded Elasticsearch API key from protected settings
+function Get-ApiKey($powershellVersion) {
+    Try
+    {
+        $thumbprint = Get-ProtectedSettings-From-Config-Json "protectedSettingsCertThumbprint"  $powershellVersion
+        $protectedSettings = Get-ProtectedSettings-From-Config-Json "protectedSettings"  $powershellVersion
+        if ( $thumbprint -ne "" -and $protectedSettings -ne "") {
+            $jsonKeys = Decrypt $protectedSettings $thumbprint
+            if ($jsonKeys) {
+                $normalizedJsonKeys = normalize-json($jsonKeys)
+                if ( $powershellVersion -ge 3 ) {
+                    $value = ($normalizedJsonKeys | ConvertFrom-Json).apiKey
+                }
+                else {
+                    $ser = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+                    $value = $ser.DeserializeObject($normalizedJsonKeys).apiKey
                 }
                 Return $value
             }
@@ -768,6 +798,36 @@ function Get-Prev-Base64Auth($powershellVersion) {
     }
 }
 
+# Get-Prev-ApiKey retrieves the encoded API key from previous protected settings
+function Get-Prev-ApiKey($powershellVersion) {
+    Try
+    {
+        $thumbprint = Get-Prev-ProtectedSettings-From-Config-Json "protectedSettingsCertThumbprint"  $powershellVersion
+        $protectedSettings = Get-Prev-ProtectedSettings-From-Config-Json "protectedSettings"  $powershellVersion
+        if ( $thumbprint -ne "" -and $protectedSettings -ne "") {
+            $jsonKeys = Decrypt $protectedSettings $thumbprint
+            if ($jsonKeys) {
+                $normalizedJsonKeys = normalize-json($jsonKeys)
+                if ( $powershellVersion -ge 3 ) {
+                    $value = ($normalizedJsonKeys | ConvertFrom-Json).apiKey
+                }
+                else {
+                    $ser = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+                    $value = $ser.DeserializeObject($normalizedJsonKeys).apiKey
+                }
+                Return $value
+            }
+        }
+    }
+    Catch
+    {
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName
+        Write-Log "Failed to read file: $FailedItem. The error message was $ErrorMessage" "ERROR"
+        throw "Error in Get-Prev-ProtectedSettings-From-Config-Json. Couldn't parse configuration file"
+    }
+}
+
 # Get-Prev-PublicSettings-From-Config-Json retrieves previous public settings
 function Get-Prev-PublicSettings-From-Config-Json($key, $powershellVersion) {
     Try
@@ -845,28 +905,14 @@ function Get-Prev-Stack-Version {
     if (-Not $elasticsearchUrl) {
         throw "Elasticsearch URL could not be found"
     }
+    $apiKey = Get-Prev-ApiKey $powershellVersion
     $password = Get-Prev-Password $powershellVersion
     $base64Auth = Get-Prev-Base64Auth $powershellVersion
-    if (-Not $password -And -Not $base64Auth) {
-        throw "Password  or base64auto key could not be found"
-    }
-    $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-    if ( $powershellVersion -gt 3 ) {
-        $headers.Add("Accept","application/json")
-    }
-    #cred
-    $encodedCredentials = ""
+    $username = ""
     if ($password) {
         $username = Get-Prev-Username $powershellVersion
-        if (-Not $username) {
-            throw "Username could not be found"
-        }
-        $pair = "$($username):$($password)"
-        $encodedCredentials = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
-    } else {
-        $encodedCredentials = $base64Auth
     }
-    $headers.Add('Authorization', "Basic $encodedCredentials")
+    $headers = New-AuthorizationHeaders $apiKey $username $password $base64Auth $false
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $jsonResult = Invoke-WebRequest -Uri "$($elasticsearchUrl)"  -Method 'GET' -Headers $headers -UseBasicParsing
     if ($jsonResult.statuscode -eq '200') {

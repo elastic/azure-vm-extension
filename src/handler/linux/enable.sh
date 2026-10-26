@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-script_path=$(dirname $(readlink -f "$0"))
-source $script_path/helper.sh
-source $script_path/newconfig.sh
+script_path=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$script_path/helper.sh"
+source "$script_path/newconfig.sh"
 
 # enable script will be run at enable time, will download artifacts, install elastic agent, enroll it to Fleet. Also, handles update configuration only.
 
@@ -121,36 +121,29 @@ Enroll_ElasticAgent() {
     log "ERROR" "[Enroll_ElasticAgent] Kibana URL could not be found/parsed"
     return 1
   fi
+  get_api_key
   get_password
   get_base64Auth
-  if [ "$PASSWORD" = "" ] && [ "$BASE64_AUTH" = "" ]; then
-    log "ERROR" "[Enroll_ElasticAgent] Password could not be found/parsed"
-    return 1
-  fi
-  local cred=""
   if [[ "$PASSWORD" != "" ]] && [[ "$PASSWORD" != "null" ]]; then
     get_username
-    if [[ "$USERNAME" = "" ]]; then
-      log "ERROR" "[Enroll_ElasticAgent] Username could not be found/parsed"
-      return 1
-    fi
-    cred=${USERNAME}:${PASSWORD}
-  else
-    cred=$(echo "$BASE64_AUTH" | base64 --decode)
+  fi
+  if ! set_auth_header "$API_KEY" "$USERNAME" "$PASSWORD" "$BASE64_AUTH"; then
+    log "ERROR" "[Enroll_ElasticAgent] API key or Basic credentials could not be found"
+    return 1
   fi
   if [[ $STACK_VERSION = "" ]]; then
     get_cloud_stack_version
   fi
   #enable Fleet
   has_fleet_server $STACK_VERSION
-  result=$(curl -X POST "${KIBANA_URL}"/api/fleet/setup  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
+  result=$(authenticated_curl -X POST "${KIBANA_URL}"/api/fleet/setup  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' )
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
     log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/setup in order to enable Kibana Fleet $result"
     return $EXITCODE
   fi
   if [[ $IS_FLEET_SERVER = false ]]; then
-    result=$(curl -X POST "${KIBANA_URL}"/api/fleet/agents/setup  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
+    result=$(authenticated_curl -X POST "${KIBANA_URL}"/api/fleet/agents/setup  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' )
     local EXITCODE=$?
     if [ $EXITCODE -ne 0 ]; then
       log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/setup in order to enable Kibana Fleet Agents $result"
@@ -159,7 +152,7 @@ Enroll_ElasticAgent() {
   fi
   #end enable Fleet
   #query for all agent policies
-  jsonResult=$(curl -X GET "${KIBANA_URL}"/api/fleet/agent_policies  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
+  jsonResult=$(authenticated_curl -X GET "${KIBANA_URL}"/api/fleet/agent_policies  -H 'Content-Type: application/json' -H 'kbn-xsrf: true' )
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
     log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/agent_policies in order to retrieve the agent_policies"
@@ -179,7 +172,7 @@ Enroll_ElasticAgent() {
 
   log "INFO" "[Enroll_ElasticAgent] policy selected is $POLICY_ID"
   # get POLICY_ID for /api/fleet/enrollment-api-keys
-  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment-api-keys -H 'Content-Type: application/json' -H 'kbn-xsrf: true' -u "$cred" )
+  jsonResult=$(authenticated_curl ${KIBANA_URL}/api/fleet/enrollment-api-keys -H 'Content-Type: application/json' -H 'kbn-xsrf: true' )
   EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
     log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to list all enrollment_token"
@@ -198,10 +191,9 @@ Enroll_ElasticAgent() {
   fi
   done
 
-  jsonResult=$(curl ${KIBANA_URL}/api/fleet/enrollment-api-keys/$POLICY_ID \
+  jsonResult=$(authenticated_curl ${KIBANA_URL}/api/fleet/enrollment-api-keys/$POLICY_ID \
         -H 'Content-Type: application/json' \
-        -H 'kbn-xsrf: true' \
-        -u "$cred" )
+        -H 'kbn-xsrf: true' )
   EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
     log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to retrieve the enrollment_token"
@@ -217,10 +209,9 @@ Enroll_ElasticAgent() {
   has_flag_version $STACK_VERSION
   if [[ $IS_FLEET_SERVER = true ]]; then
     log "INFO" "[Enroll_ElasticAgent] Getting Fleet Server info"
-    jsonResult=$(curl ${KIBANA_URL}/api/fleet/settings \
+    jsonResult=$(authenticated_curl ${KIBANA_URL}/api/fleet/settings \
         -H 'Content-Type: application/json' \
-        -H 'kbn-xsrf: true' \
-        -u "$cred" )
+        -H 'kbn-xsrf: true' )
     EXITCODE=$?
     if [ $EXITCODE -ne 0 ]; then
       log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/settings in order to retrieve the Fleet Server URL"
@@ -351,4 +342,6 @@ Run_Agent()
   clean_and_exit 0
 }
 
-Run_Agent
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  Run_Agent
+fi

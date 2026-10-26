@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-script_path=$(dirname $(readlink -f "$0"))
-source $script_path/helper.sh
+script_path=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$script_path/helper.sh"
 
 # neconfig script used during enable time, will help will uninstalling the elastic agent previously configured, it will try to retrieve the previous configuration and uninstall/remove folders for the elastic agent
 
