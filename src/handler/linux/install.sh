@@ -109,6 +109,38 @@ install_dependencies() {
   fi
 }
 
-install_dependencies
+Install_Extension() {
+  local script_path
+  script_path=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  local recovery_marker="$script_path/.uninstall-recovery-required"
+
+  # Azure passes the previous handler's uninstall exit code during an update.
+  # In particular, 1.2 can fail before package removal when fleet.yml is absent.
+  # Retry cleanup using this handler, which does not need Fleet credentials or
+  # fleet.yml. Enable will then install and enroll the agent normally.
+  case "${AZURE_GUEST_AGENT_UNINSTALL_CMD_EXIT_CODE:-NOT_RUN}" in
+    ""|0|NOT_RUN) ;;
+    *)
+      # Keep the requirement across install retries, when Azure may no longer
+      # supply the original uninstall exit code.
+      touch "$recovery_marker" || return $?
+      ;;
+  esac
+
+  if [ -f "$recovery_marker" ]; then
+    log "INFO" "[Install_Extension] Previous handler uninstall failed; retrying local cleanup"
+    if ! bash "$script_path/uninstall.sh"; then
+      log "ERROR" "[Install_Extension] Local cleanup failed; stopping update"
+      return 1
+    fi
+    rm "$recovery_marker" || return $?
+  fi
+
+  install_dependencies
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  Install_Extension
+fi
 
 

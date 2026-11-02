@@ -71,6 +71,28 @@ Store `{"apiKey":"<encoded API key>"}` in a permission-restricted
 
 For Linux based VM's users will need to install the ElasticAgent.linux VM extension.
 
+### Linux extension upgrades
+
+The Linux handler allows Azure to continue after an older handler's uninstall
+fails, then retries local cleanup using the new handler before installing
+dependencies. This handles the 1.2 failure caused by a missing
+`/etc/elastic-agent/fleet.yml` without modifying the old handler or creating a
+replacement configuration file. A failed disable or failed cleanup still stops
+the upgrade.
+
+Recovery removes the previous agent installation. The enable step then installs
+and enrolls the agent, so the upgrade request must include valid configuration
+and credentials. Collection is interrupted during this process, and the old
+Fleet record may remain because local cleanup does not unenroll it.
+
+This behavior requires a newly published extension containing the fix; upgrading
+to the existing 1.4 package does not provide it. Before release, validate an
+upgrade from 1.2 with Agent 8.19.24 on Ubuntu 22.04, including Azure status, Fleet
+connectivity and fresh logs and metrics. The Portal's version selection and
+**Sending** label are separate from this handler recovery.
+
+### Linux installation examples
+
 Example installation from CLI:
 ```
  az vm extension set -n ElasticAgent.linux --publisher Elastic --version {version number} --vm-name "{resource name}" --resource-group "{resource group name}" --protected-settings '{\"password\":\"{elastic password}\"}' --settings '{\"username\":\"{elastic username}\",\"cloudId\":\"{elastic cloud ID}\"}'

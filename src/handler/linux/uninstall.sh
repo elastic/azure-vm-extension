@@ -16,25 +16,27 @@ checkOS
 
 # Uninstall_ElasticAgent_DEB_RPM uninstalls the elastic agent and removes directories for Debian and RPM os's
 Uninstall_ElasticAgent_DEB_RPM() {
+  # retry_backoff invokes this function in a conditional, which disables bash's
+  # errexit inside it. Propagate failures explicitly, including during recovery.
   if [ "$DISTRO_OS" = "RPM" ]; then
-    sudo rpm -e elastic-agent
+    sudo rpm -e elastic-agent || return $?
   fi
   log "INFO" "[Uninstall_ElasticAgent_DEB_RPM] removing Elastic Agent directories"
   if [[ $(systemctl) =~ -\.mount ]]; then
-    sudo systemctl stop elastic-agent
-    sudo systemctl disable elastic-agent
+    sudo systemctl stop elastic-agent || return $?
+    sudo systemctl disable elastic-agent || return $?
   fi
-  sudo rm -rf /usr/share/elastic-agent
-  sudo rm -rf /etc/elastic-agent
-  sudo rm -rf /var/lib/elastic-agent
-  sudo rm -rf /usr/bin/elastic-agent
+  sudo rm -rf /usr/share/elastic-agent || return $?
+  sudo rm -rf /etc/elastic-agent || return $?
+  sudo rm -rf /var/lib/elastic-agent || return $?
+  sudo rm -rf /usr/bin/elastic-agent || return $?
   if [[ $(systemctl) =~ -\.mount ]]; then
-   sudo systemctl daemon-reload
-   sudo systemctl reset-failed
+   sudo systemctl daemon-reload || return $?
+   sudo systemctl reset-failed || return $?
   fi
   if [ "$DISTRO_OS" = "DEB" ]; then
-   sudo dpkg -r elastic-agent
-   sudo dpkg -P elastic-agent
+   sudo dpkg -r elastic-agent || return $?
+   sudo dpkg -P elastic-agent || return $?
   fi
   log "INFO" "[Uninstall_ElasticAgent_DEB_RPM] Elastic Agent removed"
 }
