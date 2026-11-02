@@ -7,8 +7,9 @@ source $script_path/helper.sh
 
 # continueOnUpdateFailure allows recovery from the old handler's uninstall,
 # but a failed disable must still stop the upgrade before uninstall runs.
+# On retries the old handler may already be disabled; Azure then passes "None".
 case "${AZURE_GUEST_AGENT_DISABLE_CMD_EXIT_CODE:-NOT_RUN}" in
-  ""|0|NOT_RUN) ;;
+  ""|0|NOT_RUN|None) ;;
   *)
     log "ERROR" "[Update_ElasticAgent] Previous handler failed to disable; stopping update"
     exit 1

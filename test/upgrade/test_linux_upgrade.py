@@ -166,7 +166,7 @@ class LinuxUpgradeTest(unittest.TestCase):
         self.assertFalse((self.path / "update.txt").exists())
 
     def test_update_without_disable_still_sets_update_flag(self):
-        for code in ("", "NOT_RUN", "0"):
+        for code in ("", "NOT_RUN", "None", "0"):
             with self.subTest(code=code):
                 updated = self.run_script(self.new, "update.sh",
                                           AZURE_GUEST_AGENT_DISABLE_CMD_EXIT_CODE=code)
