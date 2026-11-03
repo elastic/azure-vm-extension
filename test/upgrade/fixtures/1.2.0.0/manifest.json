@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/elastic/azure-vm-extension",
+  "tag": "1.2.0.0",
+  "commit": "26ffdf6ab7123771f8a03e4f81bbb06d7f247568",
+  "sha256": {
+    "disable.sh": "193e1f620a896179716c9a0fe8c07a2bdc669160a9e8e2713529975ab36c2e68",
+    "uninstall.sh": "1ab5178fb5a451506597ccdbdb5640246226e12509ced8548e3bf8b1d5951e89",
+    "helper.sh": "18b2025ab46bfeb9119f9fc2607f4a7f0955137cce384222a403f2be315842ae"
+  }
+}
