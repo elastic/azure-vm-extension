@@ -119,7 +119,7 @@ Install_Extension() {
   # Retry cleanup using this handler, which does not need Fleet credentials or
   # fleet.yml. Enable will then install and enroll the agent normally.
   case "${AZURE_GUEST_AGENT_UNINSTALL_CMD_EXIT_CODE:-NOT_RUN}" in
-    ""|0|NOT_RUN) ;;
+    ""|0|NOT_RUN|None) ;;
     *)
       # Keep the requirement across install retries, when Azure may no longer
       # supply the original uninstall exit code.

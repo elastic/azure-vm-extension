@@ -185,7 +185,7 @@ class LinuxUpgradeTest(unittest.TestCase):
         self.assertFalse(Path(self.env["PACKAGE_FILE"]).exists())
 
     def test_no_recovery_on_fresh_install_or_successful_uninstall(self):
-        for code in (None, "", "NOT_RUN", "0"):
+        for code in (None, "", "NOT_RUN", "0", "None"):
             with self.subTest(code=code):
                 installed = self.install(code)
                 self.assertEqual(installed.returncode, 0, installed.stderr)
@@ -224,11 +224,13 @@ class LinuxUpgradeTest(unittest.TestCase):
         for distro in ("DEB", "RPM"):
             with self.subTest(distro=distro):
                 self.env["TEST_DISTRO"] = distro
-                marker = self.new / ".uninstall-recovery-required"
-                marker.touch()
-                result = self.install("NOT_RUN")
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertFalse(marker.exists())
+                for code in ("NOT_RUN", "None"):
+                    with self.subTest(code=code):
+                        marker = self.new / ".uninstall-recovery-required"
+                        marker.touch()
+                        result = self.install(code)
+                        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                        self.assertFalse(marker.exists())
         self.assertIn("dependencies", Path(self.env["CALLS"]).read_text())
 
     def test_rpm_uninstall_stops_service_before_removing_package(self):

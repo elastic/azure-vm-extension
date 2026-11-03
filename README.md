@@ -93,12 +93,19 @@ The Azure Linux Agent must support `continueOnUpdateFailure` and provide
 release. Agents exposing only the older `AZURE_GUEST_AGENT_*_FAILED` variables
 are not supported by this recovery flow. In the tested agent, a skipped
 uninstall is passed to install as `NOT_RUN`; a skipped disable can be `None`.
+The handler also accepts `None` defensively for a skipped uninstall. This does
+not bypass cleanup already required by a pending recovery marker.
 
 DEB/RPM cleanup stops the service before package removal and tolerates an agent
 or inactive service that is already absent. Genuine service, package-manager,
 or filesystem errors still fail cleanup after retries, including during
 ordinary extension deletion. A marker in the new handler's directory preserves
 required recovery across install attempts and is cleared after cleanup succeeds.
+On Ubuntu 22.04.5, direct `dpkg -r` and `dpkg -P` calls for a uniquely named,
+never-installed package both returned 0 with warnings; `dpkg-query` confirmed
+that the package was unknown before and after these calls.
+Recovery uses the ordinary local uninstaller, so its failure propagation and
+retry-safe DEB/RPM cleanup are part of the recovery change.
 
 Recovery removes the previous agent installation. The enable step then installs
 and enrolls the agent, so the upgrade request must include valid configuration
