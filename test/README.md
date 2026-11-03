@@ -21,7 +21,8 @@ recovery markers, and rejection of recovery on other package types.
 
 Buildkite runs `bash .buildkite/run-tests.sh`, which checks Linux handler Bash
 syntax and runs this suite in `python:3.12-bookworm` through the pinned Docker
-plugin. The container supplies Linux Bash, including the existing retry loop's
+plugin on Docker-capable GCP agents. The container supplies Linux Bash, including
+the existing retry loop's
 negative-length substring support, which macOS Bash 3.2 lacks.
 
 The lifecycle follows the Azure Linux Agent's

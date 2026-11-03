@@ -1,6 +1,8 @@
 steps:
   - label: ":test_tube: Linux upgrade regressions"
     key: linux-upgrade-regressions
+    agents:
+      provider: gcp
     command: bash .buildkite/run-tests.sh
     plugins:
       - docker#v5.14.0:
