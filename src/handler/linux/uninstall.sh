@@ -18,13 +18,38 @@ checkOS
 Uninstall_ElasticAgent_DEB_RPM() {
   # retry_backoff invokes this function in a conditional, which disables bash's
   # errexit inside it. Propagate failures explicitly, including during recovery.
-  if [ "$DISTRO_OS" = "RPM" ]; then
-    sudo rpm -e elastic-agent || return $?
-  fi
   log "INFO" "[Uninstall_ElasticAgent_DEB_RPM] removing Elastic Agent directories"
   if [[ $(systemctl) =~ -\.mount ]]; then
-    sudo systemctl stop elastic-agent || return $?
-    sudo systemctl disable elastic-agent || return $?
+    local load_state active_state
+    load_state=$(systemctl show elastic-agent.service --property=LoadState) || return $?
+    load_state=${load_state#LoadState=}
+    if [ "$load_state" = "not-found" ]; then
+      # A retry may find the package/unit already removed. A unit without a
+      # backing file can still be running, so stop it unless it is inactive.
+      active_state=$(systemctl show elastic-agent.service --property=ActiveState) || return $?
+      active_state=${active_state#ActiveState=}
+      if [ "$active_state" != "inactive" ]; then
+        sudo systemctl stop elastic-agent || return $?
+      fi
+    else
+      sudo systemctl stop elastic-agent || return $?
+      sudo systemctl disable elastic-agent || return $?
+    fi
+  fi
+  # Stop the service before package removal: RPM's scriptlets remove its unit
+  # and reload systemd. Query the database successfully before treating an
+  # absent RPM as completed cleanup; database errors must still propagate.
+  if [ "$DISTRO_OS" = "RPM" ]; then
+    local installed_packages
+    installed_packages=$(rpm -qa --qf '%{NAME}\n') || return $?
+    if grep -Fxq elastic-agent <<< "$installed_packages"; then
+      sudo rpm -e elastic-agent || return $?
+    fi
+  elif [ "$DISTRO_OS" = "DEB" ]; then
+    # dpkg tolerates an absent package and can retry purging config files after
+    # removal succeeded on an earlier attempt.
+    sudo dpkg -r elastic-agent || return $?
+    sudo dpkg -P elastic-agent || return $?
   fi
   sudo rm -rf /usr/share/elastic-agent || return $?
   sudo rm -rf /etc/elastic-agent || return $?
@@ -33,10 +58,6 @@ Uninstall_ElasticAgent_DEB_RPM() {
   if [[ $(systemctl) =~ -\.mount ]]; then
    sudo systemctl daemon-reload || return $?
    sudo systemctl reset-failed || return $?
-  fi
-  if [ "$DISTRO_OS" = "DEB" ]; then
-   sudo dpkg -r elastic-agent || return $?
-   sudo dpkg -P elastic-agent || return $?
   fi
   log "INFO" "[Uninstall_ElasticAgent_DEB_RPM] Elastic Agent removed"
 }

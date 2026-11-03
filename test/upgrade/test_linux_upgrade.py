@@ -20,7 +20,7 @@ HANDLER = ROOT / "src/handler/linux"
 # parser, the new lifecycle commands and their retry/error handling stay real.
 MOCKS = r'''
 log() { printf '%s %s\n' "$1" "$2"; }
-checkOS() { DISTRO_OS=DEB; }
+checkOS() { DISTRO_OS=${TEST_DISTRO:-DEB}; }
 get_kibana_host() { KIBANA_URL=https://example.invalid; }
 get_password() { PASSWORD=fixture; }
 get_base64Auth() { BASE64_AUTH=; }
@@ -31,6 +31,10 @@ sleep() { :; }
 systemctl() {
   case "$*" in
     '') printf '%s\n' '-.mount' ;;
+    'show elastic-agent.service --property=LoadState')
+      if [ -f "$UNIT_FILE" ]; then echo LoadState=loaded; else echo LoadState=not-found; fi ;;
+    'show elastic-agent.service --property=ActiveState')
+      if [ "$(cat "$SERVICE_FILE")" = running ]; then echo ActiveState=active; else echo ActiveState=inactive; fi ;;
     'list-units '*)
       if [ -f "$PACKAGE_FILE" ]; then
         printf '%s\n' 'elastic-agent.service loaded inactive dead'
@@ -38,18 +42,36 @@ systemctl() {
     *) return 99 ;;
   esac
 }
+rpm() {
+  [ "$*" = '-qa --qf %{NAME}\n' ] || return 99
+  [ "${FAIL_RPM_QUERY:-0}" = 0 ] || return 74
+  if [ -f "$PACKAGE_FILE" ]; then echo elastic-agent; fi
+}
 sudo() {
   printf '%s\n' "$*" >> "$CALLS"
   case "$*" in
-    'systemctl stop elastic-agent') printf stopped > "$SERVICE_FILE" ;;
+    'systemctl stop elastic-agent')
+      [ "${FAIL_SERVICE_STOP:-0}" = 0 ] || return 7
+      [ -f "$UNIT_FILE" ] || [ "$(cat "$SERVICE_FILE")" = running ] || return 5
+      printf stopped > "$SERVICE_FILE" ;;
+    'systemctl disable elastic-agent') [ -f "$UNIT_FILE" ] || return 1 ;;
     'systemctl start elastic-agent') printf running > "$SERVICE_FILE" ;;
     'systemctl is-active --quiet elastic-agent')
       [ "$(cat "$SERVICE_FILE")" = running ] ;;
     'dpkg -r elastic-agent')
       [ "${FAIL_CLEANUP:-0}" = 0 ] || return 7
-      rm -f "$PACKAGE_FILE" ;;
-    'dpkg -P elastic-agent'|'systemctl disable elastic-agent'|\
-    'systemctl enable elastic-agent'|'systemctl daemon-reload'|\
+      rm -f "$PACKAGE_FILE" "$UNIT_FILE" ;;
+    'dpkg -P elastic-agent')
+      if [ "${FAIL_PURGE_ONCE:-0}" = 1 ] && [ ! -f "$TEST_LOGS/purge-failed" ]; then
+        touch "$TEST_LOGS/purge-failed"; return 7
+      fi ;;
+    'rpm -e elastic-agent')
+      [ -f "$PACKAGE_FILE" ] || return 1
+      [ "${FAIL_CLEANUP:-0}" = 0 ] || return 7
+      rm -f "$PACKAGE_FILE" "$UNIT_FILE"
+      printf stopped > "$SERVICE_FILE" ;;
+    'systemctl enable elastic-agent'|\
+    'systemctl daemon-reload'|\
     'systemctl reset-failed'|'rm -rf /usr/'*|'rm -rf /etc/'*|\
     'rm -rf /var/'*) : ;;
     *) printf 'Unexpected privileged command: %s\n' "$*" >&2; return 99 ;;
@@ -84,8 +106,10 @@ class LinuxUpgradeTest(unittest.TestCase):
         self.env = dict(os.environ, TEST_LOGS=str(self.path),
                         CALLS=str(self.path / "calls"),
                         PACKAGE_FILE=str(self.path / "package"),
+                        UNIT_FILE=str(self.path / "unit"),
                         SERVICE_FILE=str(self.path / "service"))
         Path(self.env["PACKAGE_FILE"]).touch()
+        Path(self.env["UNIT_FILE"]).touch()
         Path(self.env["SERVICE_FILE"]).write_text("running")
 
     def run_bash(self, command, **env):
@@ -158,6 +182,69 @@ class LinuxUpgradeTest(unittest.TestCase):
                 self.assertEqual(installed.returncode, 0, installed.stderr)
                 self.assertTrue(Path(self.env["PACKAGE_FILE"]).exists())
         self.assertNotIn("dpkg -r", Path(self.env["CALLS"]).read_text())
+
+    def remove_fixture_agent(self):
+        Path(self.env["PACKAGE_FILE"]).unlink()
+        Path(self.env["UNIT_FILE"]).unlink()
+        Path(self.env["SERVICE_FILE"]).write_text("stopped")
+
+    def test_uninstall_already_absent_agent(self):
+        self.remove_fixture_agent()
+        for distro in ("DEB", "RPM"):
+            with self.subTest(distro=distro):
+                result = self.run_script(self.new, "uninstall.sh", TEST_DISTRO=distro)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = Path(self.env["CALLS"]).read_text()
+        self.assertNotIn("systemctl stop elastic-agent", calls)
+        self.assertNotIn("rpm -e elastic-agent", calls)
+
+    def test_absent_agent_recovery_clears_marker(self):
+        self.remove_fixture_agent()
+        for distro in ("DEB", "RPM"):
+            with self.subTest(distro=distro):
+                self.env["TEST_DISTRO"] = distro
+                marker = self.new / ".uninstall-recovery-required"
+                marker.touch()
+                result = self.install("NOT_RUN")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse(marker.exists())
+        self.assertIn("dependencies", Path(self.env["CALLS"]).read_text())
+
+    def test_rpm_uninstall_stops_service_before_removing_package(self):
+        result = self.run_script(self.new, "uninstall.sh", TEST_DISTRO="RPM")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse(Path(self.env["PACKAGE_FILE"]).exists())
+        calls = Path(self.env["CALLS"]).read_text()
+        self.assertLess(calls.index("systemctl stop elastic-agent"),
+                        calls.index("rpm -e elastic-agent"))
+        repeated = self.run_script(self.new, "uninstall.sh", TEST_DISTRO="RPM")
+        self.assertEqual(repeated.returncode, 0, repeated.stdout + repeated.stderr)
+
+    def test_deb_retry_after_package_removed_and_purge_failed(self):
+        result = self.run_script(self.new, "uninstall.sh", FAIL_PURGE_ONCE="1")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = Path(self.env["CALLS"]).read_text()
+        self.assertEqual(calls.count("systemctl stop elastic-agent"), 1)
+        self.assertEqual(calls.count("dpkg -P elastic-agent"), 2)
+
+    def test_service_stop_failure_does_not_remove_package(self):
+        result = self.run_script(self.new, "uninstall.sh", FAIL_SERVICE_STOP="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(Path(self.env["PACKAGE_FILE"]).exists())
+        self.assertNotIn("dpkg -r", Path(self.env["CALLS"]).read_text())
+
+    def test_rpm_database_error_is_not_treated_as_absent_package(self):
+        result = self.run_script(self.new, "uninstall.sh", TEST_DISTRO="RPM",
+                                 FAIL_RPM_QUERY="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(Path(self.env["PACKAGE_FILE"]).exists())
+
+    def test_missing_unit_with_running_service_is_stopped(self):
+        Path(self.env["UNIT_FILE"]).unlink()
+        result = self.run_script(self.new, "uninstall.sh")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(Path(self.env["SERVICE_FILE"]).read_text(), "stopped")
+        self.assertNotIn("systemctl disable elastic-agent", Path(self.env["CALLS"]).read_text())
 
     def test_disable_failure_stops_update(self):
         updated = self.run_script(self.new, "update.sh",
