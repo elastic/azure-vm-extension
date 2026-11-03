@@ -129,7 +129,7 @@ Install_Extension() {
 
   if [ -f "$recovery_marker" ]; then
     log "INFO" "[Install_Extension] Previous handler uninstall failed; retrying local cleanup"
-    if ! bash "$script_path/uninstall.sh"; then
+    if ! bash "$script_path/uninstall.sh" --upgrade-recovery; then
       log "ERROR" "[Install_Extension] Local cleanup failed; stopping update"
       return 1
     fi

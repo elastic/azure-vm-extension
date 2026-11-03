@@ -1,9 +1,10 @@
 """Replay issue #98 using shipped 1.2 scripts and mocked host operations.
 
 Run: python3 -B -m unittest discover -s test/upgrade -v
-The local git checkout must contain tag 1.2.0.0. No VM or credentials are used.
+Requires Bash 4.2 or newer. No Git history, VM or credentials are used.
 """
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 HANDLER = ROOT / "src/handler/linux"
+LEGACY_HANDLER = Path(__file__).resolve().parent / "fixtures" / "1.2.0.0"
 
 # Only host/configuration boundaries are mocked. The old uninstall, its YAML
 # parser, the new lifecycle commands and their retry/error handling stay real.
@@ -81,6 +83,16 @@ sudo() {
 
 
 class LinuxUpgradeTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        manifest = json.loads((LEGACY_HANDLER / "manifest.json").read_text())
+        cls.legacy_source = {}
+        for name, expected in manifest["sha256"].items():
+            data = (LEGACY_HANDLER / name).read_bytes()
+            if hashlib.sha256(data).hexdigest() != expected:
+                raise ValueError(f"Legacy fixture checksum mismatch: {name}")
+            cls.legacy_source[name] = data.decode()
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="elastic-upgrade-")
         self.addCleanup(self.tmp.cleanup)
@@ -90,10 +102,7 @@ class LinuxUpgradeTest(unittest.TestCase):
         self.old = self.path / "Elastic.ElasticAgent.linux-1.2.0.0"
         self.old.mkdir()
         for name in ("uninstall.sh", "disable.sh", "helper.sh"):
-            content = subprocess.check_output(
-                ["git", "show", f"1.2.0.0:src/handler/linux/{name}"],
-                cwd=ROOT, text=True,
-            )
+            content = self.legacy_source[name]
             if name == "helper.sh":
                 # Isolate the missing file even on hosts with an agent installed.
                 content = content.replace("function parse_yaml {",
@@ -182,6 +191,18 @@ class LinuxUpgradeTest(unittest.TestCase):
                 self.assertEqual(installed.returncode, 0, installed.stderr)
                 self.assertTrue(Path(self.env["PACKAGE_FILE"]).exists())
         self.assertNotIn("dpkg -r", Path(self.env["CALLS"]).read_text())
+
+    def test_recovery_rejects_other_distros_without_cleanup(self):
+        self.env["TEST_DISTRO"] = "OTHER"
+        for code in ("1", "NOT_RUN"):
+            with self.subTest(code=code):
+                result = self.install(code)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("supports DEB/RPM installations only", result.stdout)
+                self.assertTrue((self.new / ".uninstall-recovery-required").exists())
+                self.assertTrue(Path(self.env["PACKAGE_FILE"]).exists())
+                self.assertEqual(Path(self.env["SERVICE_FILE"]).read_text(), "running")
+        self.assertFalse(Path(self.env["CALLS"]).exists())
 
     def remove_fixture_agent(self):
         Path(self.env["PACKAGE_FILE"]).unlink()

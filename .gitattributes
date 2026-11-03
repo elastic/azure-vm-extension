@@ -1,0 +1,2 @@
+# Preserve shipped legacy fixtures byte-for-byte, including historical whitespace.
+test/upgrade/fixtures/1.2.0.0/*.sh -text -whitespace

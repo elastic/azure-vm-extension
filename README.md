@@ -73,23 +73,48 @@ For Linux based VM's users will need to install the ElasticAgent.linux VM extens
 
 ### Linux extension upgrades
 
-The Linux handler allows Azure to continue after an older handler's uninstall
-fails, then retries local cleanup using the new handler before installing
-dependencies. This handles the 1.2 failure caused by a missing
-`/etc/elastic-agent/fleet.yml` without modifying the old handler or creating a
-replacement configuration file. A failed disable or failed cleanup still stops
-the upgrade.
+Automatic upgrade recovery supports **DEB and RPM installations**. If an old
+handler's uninstall fails, Azure can continue to the new handler, which retries
+local cleanup before installing dependencies. Recovery applies to any reported
+old-uninstaller failure, including the 1.2 failure caused by a missing
+`/etc/elastic-agent/fleet.yml`. It does not modify the old handler or create a
+replacement configuration file. A failed disable or failed cleanup stops the
+upgrade.
+
+On other package types, recovery returns an error before attempting cleanup.
+It does not invoke the archive installation's interactive uninstall command.
+Fresh installations and the existing ordinary-uninstall path are outside this
+recovery restriction.
+
+The Azure Linux Agent must support `continueOnUpdateFailure` and provide
+`AZURE_GUEST_AGENT_DISABLE_CMD_EXIT_CODE` and
+`AZURE_GUEST_AGENT_UNINSTALL_CMD_EXIT_CODE`. Recovery was validated with agent
+**2.16.0.2**; this is a tested version, not a claim about the earliest compatible
+release. Agents exposing only the older `AZURE_GUEST_AGENT_*_FAILED` variables
+are not supported by this recovery flow. In the tested agent, a skipped
+uninstall is passed to install as `NOT_RUN`; a skipped disable can be `None`.
+
+DEB/RPM cleanup stops the service before package removal and tolerates an agent
+or inactive service that is already absent. Genuine service, package-manager,
+or filesystem errors still fail cleanup after retries, including during
+ordinary extension deletion. A marker in the new handler's directory preserves
+required recovery across install attempts and is cleared after cleanup succeeds.
 
 Recovery removes the previous agent installation. The enable step then installs
 and enrolls the agent, so the upgrade request must include valid configuration
 and credentials. Collection is interrupted during this process, and the old
-Fleet record may remain because local cleanup does not unenroll it.
+Fleet record may remain because local cleanup does not unenroll it. Recovery
+does not preflight re-enrollment or provide rollback if the subsequent enable
+operation fails.
 
-This behavior requires a newly published extension containing the fix; upgrading
-to the existing 1.4 package does not provide it. Before release, validate an
-upgrade from 1.2 with Agent 8.19.24 on Ubuntu 22.04, including Azure status, Fleet
-connectivity and fresh logs and metrics. The Portal's version selection and
-**Sending** label are separate from this handler recovery.
+Release validation requires a newly published candidate containing these
+changes. Check fresh installation, upgrade from healthy 1.2, recovery from a
+failed 1.2 upgrade, and extension deletion, including Azure status, Fleet
+connectivity, fresh telemetry, and package/service removal. Direct handler tests
+on Ubuntu 22.04.5 and RHEL 9.6 with Agent 8.19.24 cover missing-agent cleanup,
+real package removal, recovery retries, and an injected partial DEB purge
+failure. They do not replace the published-candidate lifecycle check. The
+Portal's version selection and **Sending** label are separate investigations.
 
 ### Linux installation examples
 

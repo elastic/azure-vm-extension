@@ -14,6 +14,13 @@ sub_name="Elastic Agent"
 
 checkOS
 
+# Recovery requires the idempotent package-manager cleanup below. Do not enter
+# the archive installation's interactive uninstall path after a legacy failure.
+if [[ "${1:-}" = "--upgrade-recovery" ]] && [[ "$DISTRO_OS" != "DEB" ]] && [[ "$DISTRO_OS" != "RPM" ]]; then
+  log "ERROR" "[Uninstall_ElasticAgent] Automatic upgrade recovery supports DEB/RPM installations only; cleanup was not attempted"
+  exit 1
+fi
+
 # Uninstall_ElasticAgent_DEB_RPM uninstalls the elastic agent and removes directories for Debian and RPM os's
 Uninstall_ElasticAgent_DEB_RPM() {
   # retry_backoff invokes this function in a conditional, which disables bash's
