@@ -7,6 +7,7 @@ bash "$TEST_DIR/linux-auth.sh"
 bash "$TEST_DIR/linux-flow.sh"
 bash "$TEST_DIR/linux-fleet-versions.sh"
 bash "$TEST_DIR/linux-agent-version.sh"
+bash "$TEST_DIR/linux-error-status.sh"
 
 if command -v pwsh >/dev/null 2>&1; then
   pwsh -NoProfile -File "$TEST_DIR/windows-auth.ps1"

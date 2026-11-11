@@ -309,6 +309,19 @@ Run_Agent()
   clean_and_exit 0
 }
 
+# report_failure writes an error status when enable exits with a failure.
+# Without a status file the Azure guest agent keeps reporting the extension as
+# transitioning, so Azure never shows it as Failed.
+report_failure() {
+  local rc=$1
+  trap - EXIT
+  if [[ $rc -ne 0 ]]; then
+    write_status "$name" "$first_operation" "error" "$message" "$sub_name" "error" "Elastic Agent installation failed with exit code $rc, see es-agent.log" || true
+  fi
+  exit "$rc"
+}
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  trap 'report_failure $?' EXIT
   Run_Agent
 fi
