@@ -252,11 +252,28 @@ get_cloud_stack_version () {
     log "ERROR" "[get_cloud_stack_version] API key or Basic credentials could not be found"
     clean_and_exit 1
   fi
+  # Prefer the newest released agent version Fleet offers (Kibana 8.4+).
+  # "+build" items have no package on artifacts.elastic.co, so skip them.
+  STACK_VERSION=""
+  get_kibana_host
+  if [ "$KIBANA_URL" != "" ]; then
+    json_result=$(fleet_api_get /api/fleet/agents/available_versions) || json_result=""
+    STACK_VERSION=$(jq -r '[(.items? // [])[] | select(type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))][0] // empty' <<<"$json_result" 2>/dev/null) || STACK_VERSION=""
+  fi
+  if [ "$STACK_VERSION" != "" ]; then
+    log "INFO" "[get_cloud_stack_version] Agent version from Fleet available versions is $STACK_VERSION"
+    return 0
+  fi
+  log "INFO" "[get_cloud_stack_version] Fleet available versions not usable, reading the Elasticsearch version"
   json_result=$(authenticated_curl "${ELASTICSEARCH_URL}" -H 'Content-Type: application/json')
   local EXITCODE=$?
   if [ $EXITCODE -ne 0 ]; then
       log "ERROR" "[get_cloud_stack_version] error pinging $ELASTICSEARCH_URL"
       clean_and_exit $EXITCODE
+  fi
+  if [ "$(jq -r '.version.build_flavor // empty' <<<"$json_result")" = "serverless" ]; then
+    log "ERROR" "[get_cloud_stack_version] Serverless Elasticsearch does not report a release version and Fleet available versions is not usable"
+    clean_and_exit 1
   fi
   STACK_VERSION=$(echo $json_result | jq -r '.version.number')
   log "INFO" "[get_cloud_stack_version] Stack version found is $STACK_VERSION"
