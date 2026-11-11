@@ -32,6 +32,8 @@ IS_FLEET_SERVER=""
 HAS_FLAG_VERSION=""
 POLICY_NAME="Azure VM extension policy"
 AUTHORIZATION_HEADER=""
+ENROLLMENT_TOKEN=""
+FLEET_SERVER_URL=""
 
 # set_auth_header selects API key authentication first, then the existing Basic
 # authentication settings. The API key is the encoded value returned by the
@@ -361,6 +363,64 @@ get_azure_policy() {
     POLICY_ID=$policy_id
   fi
 done
+}
+
+# fleet_api_get prints the body of an authenticated Kibana Fleet GET request
+fleet_api_get() {
+  authenticated_curl -sS "${KIBANA_URL}${1}" -H 'Content-Type: application/json' -H 'kbn-xsrf: true'
+}
+
+# is_not_found succeeds when a Kibana response body is a 404 error
+is_not_found() {
+  jq -e '.statusCode == 404' >/dev/null 2>&1 <<<"$1"
+}
+
+# get_enrollment_token sets ENROLLMENT_TOKEN to the active enrollment token of
+# the given agent policy. Kibana 9.0 removed the `enrollment-api-keys` path and
+# the `list` response property; older stacks only have those, so the
+# `enrollment_api_keys` path and `items` property are tried first.
+get_enrollment_token() {
+  local policy_id="${1}" base result key_id
+  ENROLLMENT_TOKEN=""
+  for base in /api/fleet/enrollment_api_keys /api/fleet/enrollment-api-keys; do
+    result=$(fleet_api_get "$base") || return 1
+    if is_not_found "$result"; then
+      log "INFO" "[get_enrollment_token] $base is not available, trying the next API"
+      continue
+    fi
+    key_id=$(jq -r --arg policy "$policy_id" \
+      '[(.items // .list // [])[] | select((.active | tostring) == "true" and .policy_id == $policy)][0].id // empty' <<<"$result") || return 1
+    if [[ "$key_id" = "" ]]; then
+      log "ERROR" "[get_enrollment_token] no active enrollment token found for policy $policy_id"
+      return 1
+    fi
+    result=$(fleet_api_get "$base/$key_id") || return 1
+    ENROLLMENT_TOKEN=$(jq -r '.item.api_key // empty' <<<"$result") || return 1
+    [[ "$ENROLLMENT_TOKEN" != "" ]]
+    return
+  done
+  log "ERROR" "[get_enrollment_token] no enrollment token API is available"
+  return 1
+}
+
+# get_fleet_server_url sets FLEET_SERVER_URL to the default Fleet Server host.
+# Kibana 9.0 removed `fleet_server_hosts` from /api/fleet/settings; the
+# /api/fleet/fleet_server_hosts API replaces it. Older stacks use settings.
+get_fleet_server_url() {
+  local result
+  FLEET_SERVER_URL=""
+  result=$(fleet_api_get /api/fleet/fleet_server_hosts) || return 1
+  if ! is_not_found "$result"; then
+    FLEET_SERVER_URL=$(jq -r '[(.items // [])[] | select(.is_default == true)][0].host_urls[0] // empty' <<<"$result") || return 1
+  fi
+  if [[ "$FLEET_SERVER_URL" = "" ]]; then
+    result=$(fleet_api_get /api/fleet/settings) || return 1
+    FLEET_SERVER_URL=$(jq -r '.item.fleet_server_hosts[0] // empty' <<<"$result") || return 1
+  fi
+  if [[ "$FLEET_SERVER_URL" = "" ]]; then
+    log "ERROR" "[get_fleet_server_url] no default Fleet Server host found"
+    return 1
+  fi
 }
 
 # write_status will write an event in the status file, required for azure vm extension

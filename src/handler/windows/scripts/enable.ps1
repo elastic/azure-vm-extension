@@ -111,44 +111,19 @@ function Install-ElasticAgent {
                     throw "No active policies were found. Please create a policy in Kibana Fleet"
                 }
                 Write-Log "Found policy id $azurePolicy" "INFO"
-                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys"  -Method 'GET' -Headers $headers -UseBasicParsing
-                if ($jsonResult.statuscode -eq '200') {
-                    $enrollment= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "list"
-                    foreach ($policy in $enrollment) {
-                        if ($policy.active -eq "true" -And $policy.policy_id -eq $azurePolicy) {
-                            $policyID = $policy.id
-                            break
-                        }
-                    }
-                } else {
-                    throw "Retrieving enrollment api keys has failed, api request returned status $jsonResult.statuscode"
+                $enrollmenToken = Get-EnrollmentToken $kibanaUrl $headers $azurePolicy
+                Write-Log "Found enrollment token for policy $azurePolicy" "INFO"
+                if (HasFleetServer("$stackVersion")) {
+                    Write-Log "Getting Fleet Server URL" "INFO"
+                    $fleetServer = Get-FleetServerUrl $kibanaUrl $headers
+                    Write-Log "Installing Elastic Agent and enrolling to Fleet Server $fleetServer" "INFO"
+                    & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --url=$fleetServer --enrollment-token=$enrollmenToken
                 }
-                $jsonResult = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/enrollment-api-keys/$($policyID)"  -Method 'GET' -Headers $headers -UseBasicParsing
-                if ($jsonResult.statuscode -eq '200') {
-                    $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand "item"
-                    $enrollmenToken=$keyValue.api_key
-                    Write-Log "Found enrollment_token $enrollmenToken" "INFO"
-                    if (HasFleetServer("$stackVersion")) {
-                        Write-Log "Getting FLeet Serverl URL" "INFO"
-                        $jsonResultSettings = Invoke-WebRequest -Uri "$($kibanaUrl)/api/fleet/settings"  -Method 'GET' -Headers $headers -UseBasicParsing
-                        if ($jsonResultSettings.statuscode -eq '200')
-                        {
-                            $keyValue = ConvertFrom-Json $jsonResultSettings.Content | Select-Object -expand "item"
-                            $fleetServer = $keyValue.fleet_server_hosts[0]
-                        } else {
-                            throw "Retrieving Fleet Server URL has failed, please check if it has been enabled."
-                        }
-                        Write-Log "Installing Elastic Agent and enrolling to Fleet Server $fleetServer" "INFO"
-                        & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --url=$fleetServer --enrollment-token=$enrollmenToken
-                    }
-                    else {
-                        Write-Log "Installing Elastic Agent and enrolling to Fleet $kibanaUrl" "INFO"
-                        & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --kibana-url=$kibanaUrl --enrollment-token=$enrollmenToken
-                    }
-                    Write-Log "Elastic Agent has been enrolled" "INFO"
-                }else {
-                    throw "Retrieving the enrollment tokens has failed, api request returned status $jsonResult.statuscode"
+                else {
+                    Write-Log "Installing Elastic Agent and enrolling to Fleet $kibanaUrl" "INFO"
+                    & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --kibana-url=$kibanaUrl --enrollment-token=$enrollmenToken
                 }
+                Write-Log "Elastic Agent has been enrolled" "INFO"
             } else {
                 throw "Retrieving the agent policies has failed, api request returned status $jsonResult.statuscode"
             }

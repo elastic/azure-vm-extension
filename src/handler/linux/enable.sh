@@ -171,53 +171,20 @@ Enroll_ElasticAgent() {
   fi
 
   log "INFO" "[Enroll_ElasticAgent] policy selected is $POLICY_ID"
-  # get POLICY_ID for /api/fleet/enrollment-api-keys
-  jsonResult=$(authenticated_curl ${KIBANA_URL}/api/fleet/enrollment-api-keys -H 'Content-Type: application/json' -H 'kbn-xsrf: true' )
-  EXITCODE=$?
-  if [ $EXITCODE -ne 0 ]; then
-    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to list all enrollment_token"
-    return $EXITCODE
-  fi
-  list=$(echo "$jsonResult" | jq -r '.list')
-  for row in $(echo "${list}" | jq -r '.[] | @base64'); do
-  _jq() {
-     echo ${row} | base64 --decode | jq -r ${1}
-    }
-  is_active=$(_jq '.active')
-  policy_id=$(_jq '.policy_id')
-  if [[ "$is_active" = "true" ]] && [[ "$policy_id" = "$POLICY_ID" ]]; then
-    POLICY_ID=$(_jq '.id')
-    break
-  fi
-  done
-
-  jsonResult=$(authenticated_curl ${KIBANA_URL}/api/fleet/enrollment-api-keys/$POLICY_ID \
-        -H 'Content-Type: application/json' \
-        -H 'kbn-xsrf: true' )
-  EXITCODE=$?
-  if [ $EXITCODE -ne 0 ]; then
-    log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/enrollment-api-keys in order to retrieve the enrollment_token"
-    return $EXITCODE
-  fi
-  enrollment_token=$(echo $jsonResult | jq -r '.item.api_key')
-  if [[ "$enrollment_token" = "" ]]; then
+  if ! get_enrollment_token "$POLICY_ID"; then
     log "ERROR" "[Enroll_ElasticAgent] enrollment_token could not be found/parsed"
     return 1
   fi
-  log "INFO" "[Enroll_ElasticAgent] enrollment_token is $enrollment_token"
+  enrollment_token=$ENROLLMENT_TOKEN
   log "INFO" "[Enroll_ElasticAgent] Enrolling the Elastic Agent to Fleet ${KIBANA_URL}"
   has_flag_version $STACK_VERSION
   if [[ $IS_FLEET_SERVER = true ]]; then
     log "INFO" "[Enroll_ElasticAgent] Getting Fleet Server info"
-    jsonResult=$(authenticated_curl ${KIBANA_URL}/api/fleet/settings \
-        -H 'Content-Type: application/json' \
-        -H 'kbn-xsrf: true' )
-    EXITCODE=$?
-    if [ $EXITCODE -ne 0 ]; then
-      log "ERROR" "[Enroll_ElasticAgent] error calling $KIBANA_URL/api/fleet/settings in order to retrieve the Fleet Server URL"
-      return $EXITCODE
+    if ! get_fleet_server_url; then
+      log "ERROR" "[Enroll_ElasticAgent] the Fleet Server URL could not be retrieved"
+      return 1
     fi
-    fleet_server=$(echo $jsonResult | jq -r '.item.fleet_server_hosts[0]')
+    fleet_server=$FLEET_SERVER_URL
     log "INFO" "[Enroll_ElasticAgent] Found fleet server $fleet_server"
     sudo elastic-agent enroll  --url="${fleet_server}" --enrollment-token="$enrollment_token" -f
   elif [[ $HAS_FLAG_VERSION = true  ]]; then
