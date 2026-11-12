@@ -1,3 +1,9 @@
 steps:
-  - label: "Example test"
-    command: echo "Hello!"
+  - label: ":test_tube: Linux upgrade regressions"
+    key: linux-upgrade-regressions
+    agents:
+      provider: gcp
+    command: bash .buildkite/run-tests.sh
+    plugins:
+      - docker#v5.14.0:
+          image: python:3.12-bookworm
