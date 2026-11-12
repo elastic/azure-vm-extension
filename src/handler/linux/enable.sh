@@ -252,13 +252,24 @@ Reconfigure_Elastic_agent_DEB_RPM() {
   write_status "$name_en" "$operation_en" "success" "$message_en" "$sub_name" "success" "Elastic Agent service has started"
 }
 
+# agent_unit_load_state prints the LOAD state of the elastic-agent systemd unit
+# (for example "loaded" or "not-found"), or nothing when systemd lists no unit.
+# Since systemd 246, `list-units --no-legend` keeps a leading status column
+# ("  ", or "● " for a failed unit), so the unit name is matched in any field.
+agent_unit_load_state() {
+  systemctl list-units --all -t service --full --no-legend "$service_name.service" 2>/dev/null |
+    awk -v unit="$service_name.service" '{ for (i = 1; i < NF; i++) if ($i == unit) { print $(i + 1); exit } }' || true
+}
+
 #Run_Agent_DEB_RPM will check if es agent service is installed or if is vm extension update, else will start a clean installation
 Run_Agent_DEB_RPM() {
   log "INFO" "[Start_ElasticAgent] starting Elastic Agent"
   log "INFO" "[Run_Agent_DEB_RPM] Prepare elastic agent for DEB/RPM systems"
   if [[ $(systemctl) =~ -\.mount ]]; then
     log "INFO" "[Run_Agent_DEB_RPM]  Systemd detected"
-    if [[ $(systemctl list-units --all -t service --full --no-legend "$service_name.service" | cut -f1 -d' ') == $service_name.service ]] && [[ $(systemctl list-units --all -t service --full --no-legend "$service_name.service" | cut -f2 -d' ') != "not-found" ]]; then
+    local load_state
+    load_state=$(agent_unit_load_state)
+    if [[ "$load_state" != "" ]] && [[ "$load_state" != "not-found" ]]; then
       service_status="$(sudo systemctl is-active --quiet elastic-agent && echo Running || echo Stopped)"
       is_new_config
       if [[ $IS_NEW_CONFIG = true ]]; then

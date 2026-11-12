@@ -9,6 +9,7 @@ bash "$TEST_DIR/linux-fleet-versions.sh"
 bash "$TEST_DIR/linux-agent-version.sh"
 bash "$TEST_DIR/linux-error-status.sh"
 bash "$TEST_DIR/linux-install-retry.sh"
+bash "$TEST_DIR/linux-service-detection.sh"
 
 if command -v pwsh >/dev/null 2>&1; then
   pwsh -NoProfile -File "$TEST_DIR/windows-auth.ps1"
