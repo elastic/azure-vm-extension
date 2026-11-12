@@ -88,6 +88,9 @@ log() {
 get_elasticsearch_host() {
   ELASTICSEARCH_URL="https://elasticsearch.example.test"
 }
+get_kibana_host() {
+  KIBANA_URL="https://kibana.example.test"
+}
 get_api_key() {
   API_KEY="aWQ6dGVzdC1hcGkta2V5"
 }

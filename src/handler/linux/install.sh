@@ -48,6 +48,30 @@ else
 fi
 }
 
+# run_with_retry runs a command until it succeeds, waiting longer after each
+# failure. On a newly created VM, name resolution and the package mirrors can
+# fail for a few minutes, so a single quick retry is not enough.
+run_with_retry() {
+  local attempt=1 max_attempts=5 delay=15
+  until "$@"; do
+    if [ "$attempt" -ge "$max_attempts" ]; then
+      log "[run_with_retry] '$*' failed after $attempt attempts" "ERROR"
+      return 1
+    fi
+    log "[run_with_retry] '$*' failed (attempt $attempt of $max_attempts), retrying in ${delay}s" "WARN"
+    sleep "$delay"
+    attempt=$((attempt + 1))
+    delay=$((delay * 2))
+  done
+}
+
+# apt_install refreshes the package lists and installs a package; a failed
+# refresh leaves empty lists, so each attempt refreshes them again.
+apt_install() {
+  sudo apt-get update || true
+  sudo apt-get --yes install "$1"
+}
+
 # install_dependencies will install jq, wget packages if missing
 install_dependencies() {
   get_distro
@@ -63,14 +87,11 @@ install_dependencies() {
   log "distro: $DISTRO_NAME version: $DISTRO_VERSION" "INFO"
   if dpkg -S /bin/ls >/dev/null 2>&1 || dpkg -S /usr/bin/ls >/dev/null 2>&1; then
     log "[install_dependencies] distro is Debian" "INFO"
-    sudo apt-get update
     if [ $(dpkg-query -W -f='${Status}' curl 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-      #sudo apt-get --yes install  curl;
-      (sudo apt-get --yes install  curl || (sleep 15; sudo apt-get --yes install  curl))
+      run_with_retry apt_install curl
     fi
     if [ $(dpkg-query -W -f='${Status}' jq 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-      #sudo apt-get --yes install  jq;
-      (sudo apt-get --yes install  jq || (sleep 15; apt-get --yes install  jq))
+      run_with_retry apt_install jq
     fi
   elif rpm -q -f /bin/ls >/dev/null 2>&1; then
     log "[install_dependencies] distro is RPM" "INFO"
@@ -79,26 +100,26 @@ install_dependencies() {
     fi
     #sudo yum update -y --disablerepo='*' --enablerepo='*microsoft*'
     if ! command -v wget &> /dev/null; then
-      sudo yum install wget -y
+      run_with_retry sudo yum install wget -y
     else
       log "[install_dependencies] wget is already installed" "INFO"
     fi
     if ! command -v jq &> /dev/null; then
       if [[ $distro == *"centos"* ]] && [[ $DISTRO_VERSION == "6"* ]] ; then
         log "CentOS install jq" "INFO"
-        sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+        run_with_retry sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
         sudo chmod +x ./jq
         sudo cp jq /usr/bin
         log "CentOS install jq finished" "INFO"
       elif [[ $distro == "oracle"* ]] && [[ $DISTRO_VERSION == "6"* ]] ; then
         log "Redhat install jq" "INFO"
-        sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+        run_with_retry sudo wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
         sudo chmod +x ./jq
         sudo cp jq /usr/bin
         log "Redhat install jq finished" "INFO"
       else
-        sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm -y -q
-        sudo yum install jq -y
+        run_with_retry sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm -y -q
+        run_with_retry sudo yum install jq -y
       fi
     else
       log "[install_dependencies] jq is already installed" "INFO"

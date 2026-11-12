@@ -110,18 +110,44 @@ function Get-Stack-Version {
   if ($password) {
       $username = Get-Username $powershellVersion
   }
-  $headers = New-AuthorizationHeaders $apiKey $username $password $base64Auth $false
+  $headers = New-AuthorizationHeaders $apiKey $username $password $base64Auth $true
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  $kibanaUrl = Get-Kibana-URL $powershellVersion
+  return Resolve-AgentVersion $kibanaUrl $elasticsearchUrl $headers
+}
+
+# Resolve-AgentVersion picks the Elastic Agent version to install: the newest
+# plain x.y.z release in Fleet's available versions (Kibana 8.4+; "+build"
+# items have no download package), otherwise the Elasticsearch version.
+# Serverless Elasticsearch does not report a release version, so it needs Fleet.
+function Resolve-AgentVersion($kibanaUrl, $elasticsearchUrl, $headers) {
+  if ($kibanaUrl) {
+      try {
+          $result = Invoke-FleetGet $kibanaUrl $headers "/api/fleet/agents/available_versions"
+          if ($null -ne $result) {
+              foreach ($version in $result.items) {
+                  if ("$version" -match '^[0-9]+\.[0-9]+\.[0-9]+$') {
+                      Write-Log "Agent version from Fleet available versions is $version" "INFO"
+                      return "$version"
+                  }
+              }
+          }
+      } catch {
+          Write-Log "Fleet available versions not usable: $_" "INFO"
+      }
+  }
+  Write-Log "Reading the Elasticsearch version" "INFO"
   $jsonResult = Invoke-WebRequest -Uri "$($elasticsearchUrl)"  -Method 'GET' -Headers $headers -UseBasicParsing
   if ($jsonResult.statuscode -eq '200') {
-      $keyValue= ConvertFrom-Json $jsonResult.Content | Select-Object -expand ""
+      $keyValue = ConvertFrom-Json $jsonResult.Content
+      if ($keyValue.version.build_flavor -eq "serverless") {
+          throw "Serverless Elasticsearch does not report a release version and Fleet available versions is not usable"
+      }
       $stackVersion=$keyValue.version.number
       Write-Log "Found stack version  $stackVersion" "INFO"
       return $stackVersion
-  }else {
-      Write-Log "Error pinging elastic cluster $elasticsearchUrl" "ERROR"
-      return ""
-   }
+  }
+  Write-Log "Error pinging elastic cluster $elasticsearchUrl" "ERROR"
   return ""
 }
 
@@ -449,6 +475,76 @@ function Get-Azure-Policy($content){
 }
 
 # Create-Azure-Policy creates a dedicated Azure VM extension policy
+# Invoke-FleetGet returns the parsed JSON body of a Kibana Fleet GET request,
+# or $null when the API does not exist on this stack (HTTP 404).
+function Invoke-FleetGet($kibanaUrl, $headers, $path) {
+    try {
+        $response = Invoke-WebRequest -Uri "$($kibanaUrl)$($path)" -Method 'GET' -Headers $headers -UseBasicParsing
+    } catch {
+        $httpResponse = $_.Exception.Response
+        if ($httpResponse -and [int]$httpResponse.StatusCode -eq 404) {
+            return $null
+        }
+        throw
+    }
+    if ([int]$response.StatusCode -ne 200) {
+        throw "Request to $path failed with status $($response.StatusCode)"
+    }
+    return ConvertFrom-Json $response.Content
+}
+
+# Get-EnrollmentToken returns the active enrollment token of an agent policy.
+# Kibana 9.0 removed the enrollment-api-keys path and the "list" response
+# property; older stacks only have those, so the new API is tried first.
+function Get-EnrollmentToken($kibanaUrl, $headers, $policyId) {
+    foreach ($path in @("/api/fleet/enrollment_api_keys", "/api/fleet/enrollment-api-keys")) {
+        $result = Invoke-FleetGet $kibanaUrl $headers $path
+        if ($null -eq $result) {
+            Write-Log "$path is not available, trying the next API" "INFO"
+            continue
+        }
+        $keys = $result.items
+        if ($null -eq $keys) {
+            $keys = $result.list
+        }
+        $keyId = $null
+        foreach ($key in $keys) {
+            if ("$($key.active)" -eq "True" -And $key.policy_id -eq $policyId) {
+                $keyId = $key.id
+                break
+            }
+        }
+        if (-Not $keyId) {
+            throw "No active enrollment token found for policy $policyId"
+        }
+        $result = Invoke-FleetGet $kibanaUrl $headers "$path/$keyId"
+        if (($null -eq $result) -Or (-Not $result.item.api_key)) {
+            throw "Enrollment token $keyId could not be retrieved"
+        }
+        return $result.item.api_key
+    }
+    throw "No enrollment token API is available"
+}
+
+# Get-FleetServerUrl returns the default Fleet Server host. Kibana 9.0 removed
+# fleet_server_hosts from /api/fleet/settings; /api/fleet/fleet_server_hosts
+# replaces it. Older stacks only have the settings property.
+function Get-FleetServerUrl($kibanaUrl, $headers) {
+    $result = Invoke-FleetGet $kibanaUrl $headers "/api/fleet/fleet_server_hosts"
+    if ($null -ne $result) {
+        foreach ($fleetServerHost in $result.items) {
+            if ($fleetServerHost.is_default -eq $true -And $fleetServerHost.host_urls) {
+                return $fleetServerHost.host_urls[0]
+            }
+        }
+    }
+    $result = Invoke-FleetGet $kibanaUrl $headers "/api/fleet/settings"
+    if (($null -ne $result) -And $result.item.fleet_server_hosts) {
+        return $result.item.fleet_server_hosts[0]
+    }
+    throw "No default Fleet Server host found"
+}
+
 function Create-Azure-Policy($content){
     $username = ""
     if ($password) {

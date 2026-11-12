@@ -29,14 +29,14 @@ curl() {
     *"/api/fleet/agent_policies"*)
       printf '%s\n' '{"items":[]}'
       ;;
-    *"/api/fleet/enrollment-api-keys/enrollment-456"*)
+    *"/api/fleet/enrollment_api_keys/enrollment-456"*)
       printf '%s\n' '{"item":{"api_key":"enrollment-token"}}'
       ;;
-    *"/api/fleet/enrollment-api-keys"*)
-      printf '%s\n' '{"list":[{"id":"enrollment-456","active":true,"policy_id":"policy-123"}]}'
+    *"/api/fleet/enrollment_api_keys"*)
+      printf '%s\n' '{"items":[{"id":"enrollment-456","active":true,"policy_id":"policy-123"}]}'
       ;;
-    *"/api/fleet/settings"*)
-      printf '%s\n' '{"item":{"fleet_server_hosts":["https://fleet.example.test:443"]}}'
+    *"/api/fleet/fleet_server_hosts"*)
+      printf '%s\n' '{"items":[{"host_urls":["https://fleet.example.test:443"],"is_default":true}]}'
       ;;
     *)
       fail "unexpected curl request: $*"
@@ -79,9 +79,9 @@ expected_paths='
 /api/fleet/setup
 /api/fleet/agent_policies
 /api/fleet/agent_policies?sys_monitoring=true
-/api/fleet/enrollment-api-keys
-/api/fleet/enrollment-api-keys/enrollment-456
-/api/fleet/settings
+/api/fleet/enrollment_api_keys
+/api/fleet/enrollment_api_keys/enrollment-456
+/api/fleet/fleet_server_hosts
 '
 while IFS= read -r path; do
   if [ "$path" = "" ]; then
