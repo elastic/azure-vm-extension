@@ -45,16 +45,21 @@ curl() {
     *:/api/fleet/agent_policies)
       printf '%s\n' '{"items":[{"id":"other-policy","name":"Other","status":"active"},{"id":"policy-123","name":"Azure VM extension policy","status":"active"}],"total":2,"page":1,"perPage":20}' ;;
 
-    hosted9:/api/fleet/enrollment_api_keys*)
+    hosted9-paginated:/api/fleet/enrollment_api_keys)
+      printf '%s\n' '{"items":[{"id":"key-old","active":false,"policy_id":"policy-123"}],"total":2,"page":1,"perPage":1}' ;;
+    hosted9-paginated:/api/fleet/enrollment_api_keys\?page=2)
+      printf '%s\n' '{"items":[{"id":"key-azure","active":true,"policy_id":"policy-123"}],"total":2,"page":2,"perPage":1}' ;;
+    hosted9*:/api/fleet/enrollment_api_keys*)
       case "$path" in
-        */enrollment_api_keys/key-azure*) printf '%s\n' '{"item":{"id":"key-azure","api_key":"token-azure","policy_id":"policy-123","active":true}}' ;;
+        */enrollment_api_keys/key-azure) printf '%s\n' '{"item":{"id":"key-azure","api_key":"token-azure","policy_id":"policy-123","active":true}}' ;;
         */enrollment_api_keys/*) not_found ;;
-        *) printf '%s\n' '{"items":[{"id":"key-other","api_key":"token-other","active":true,"policy_id":"other-policy"},{"id":"key-azure","api_key":"token-azure","active":true,"policy_id":"policy-123"}],"total":2,"page":1,"perPage":20}' ;;
+        /api/fleet/enrollment_api_keys) printf '%s\n' '{"items":[{"id":"key-other","active":true,"policy_id":"other-policy"},{"id":"key-old","active":false,"policy_id":"policy-123"},{"id":"key-azure","api_key":"token-azure","active":true,"policy_id":"policy-123"}],"total":3,"page":1,"perPage":20}' ;;
+        *) fail "unexpected enrollment key request: $path" ;;
       esac ;;
-    hosted9:/api/fleet/enrollment-api-keys*) not_found ;;
-    hosted9:/api/fleet/settings)
+    hosted9*:/api/fleet/enrollment-api-keys*) not_found ;;
+    hosted9*:/api/fleet/settings)
       printf '%s\n' '{"item":{"id":"fleet-default-settings","prerelease_integrations_enabled":false}}' ;;
-    hosted9:/api/fleet/fleet_server_hosts)
+    hosted9*:/api/fleet/fleet_server_hosts)
       printf '%s\n' '{"items":[{"id":"other","name":"Other","host_urls":["https://other.example.test:443"],"is_default":false},{"id":"fleet-default-fleet-server-host","name":"Default","host_urls":["https://fleet9.example.test:443"],"is_default":true}],"total":2,"page":1,"perPage":10000}' ;;
 
     hosted8:/api/fleet/enrollment_api_keys*|hosted8:/api/fleet/enrollment-api-keys*)
@@ -70,9 +75,10 @@ curl() {
 
     legacy:/api/fleet/enrollment-api-keys*)
       case "$path" in
-        */enrollment-api-keys/key-azure*) printf '%s\n' '{"item":{"id":"key-azure","api_key":"token-azure","policy_id":"policy-123","active":true}}' ;;
-        */enrollment-api-keys/*) not_found ;;
-        *) printf '%s\n' '{"list":[{"id":"key-azure","active":true,"policy_id":"policy-123"}],"total":1,"page":1,"perPage":20}' ;;
+        /api/fleet/enrollment-api-keys/key-azure) printf '%s\n' '{"item":{"id":"key-azure","api_key":"token-azure","policy_id":"policy-123","active":true}}' ;;
+        /api/fleet/enrollment-api-keys) printf '%s\n' '{"list":[{"id":"key-other","active":true,"policy_id":"other-policy"}],"total":2,"page":1,"perPage":1}' ;;
+        /api/fleet/enrollment-api-keys\?page=2) printf '%s\n' '{"list":[{"id":"key-azure","active":true,"policy_id":"policy-123"}],"total":2,"page":2,"perPage":1}' ;;
+        *) fail "unexpected legacy enrollment key request: $path" ;;
       esac ;;
     legacy:/api/fleet/enrollment_api_keys*) not_found ;;
     legacy:/api/fleet/fleet_server_hosts) not_found ;;
@@ -115,5 +121,6 @@ run_scenario hosted9 9.2.1 'elastic-agent enroll --url=https://fleet9.example.te
 if grep -F '/api/fleet/enrollment-api-keys' "$work_dir/requests" >/dev/null; then
   fail "9.x flow must not call the removed enrollment-api-keys endpoint"
 fi
+run_scenario hosted9-paginated 9.2.1 'elastic-agent enroll --url=https://fleet9.example.test:443 --enrollment-token=token-azure -f'
 run_scenario hosted8 8.19.25 'elastic-agent enroll --url=https://fleet8.example.test:443 --enrollment-token=token-azure -f'
 run_scenario legacy 7.17.0 'elastic-agent enroll --url=https://fleet7.example.test:443 --enrollment-token=token-azure -f'

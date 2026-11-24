@@ -397,7 +397,7 @@ is_not_found() {
 # the `list` response property; older stacks only have those, so the
 # `enrollment_api_keys` path and `items` property are tried first.
 get_enrollment_token() {
-  local policy_id="${1}" base result key_id
+  local policy_id="${1}" base result key_id page
   ENROLLMENT_TOKEN=""
   for base in /api/fleet/enrollment_api_keys /api/fleet/enrollment-api-keys; do
     result=$(fleet_api_get "$base") || return 1
@@ -405,16 +405,32 @@ get_enrollment_token() {
       log "INFO" "[get_enrollment_token] $base is not available, trying the next API"
       continue
     fi
-    key_id=$(jq -r --arg policy "$policy_id" \
-      '[(.items // .list // [])[] | select((.active | tostring) == "true" and .policy_id == $policy)][0].id // empty' <<<"$result") || return 1
+    page=1
+    while :; do
+      key_id=$(jq -r --arg policy "$policy_id" \
+        '[(.items // .list // [])[] | select((.active | tostring) == "true" and .policy_id == $policy)][0].id // empty' <<<"$result") || return 1
+      if [[ -n "$key_id" ]]; then
+        break
+      fi
+      if ! jq -e --argjson page "$page" \
+        '.page == $page and (.perPage // 0) > 0 and ($page * .perPage < (.total // 0))' \
+        >/dev/null <<<"$result"; then
+        break
+      fi
+      page=$((page + 1))
+      result=$(fleet_api_get "$base?page=$page") || return 1
+    done
     if [[ "$key_id" = "" ]]; then
       log "ERROR" "[get_enrollment_token] no active enrollment token found for policy $policy_id"
       return 1
     fi
     result=$(fleet_api_get "$base/$key_id") || return 1
     ENROLLMENT_TOKEN=$(jq -r '.item.api_key // empty' <<<"$result") || return 1
-    [[ "$ENROLLMENT_TOKEN" != "" ]]
-    return
+    if [[ -z "$ENROLLMENT_TOKEN" ]]; then
+      log "ERROR" "[get_enrollment_token] no api_key returned for enrollment key $key_id"
+      return 1
+    fi
+    return 0
   done
   log "ERROR" "[get_enrollment_token] no enrollment token API is available"
   return 1

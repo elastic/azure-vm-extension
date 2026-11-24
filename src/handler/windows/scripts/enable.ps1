@@ -28,7 +28,7 @@ function Install-ElasticAgent {
     $retries = 3
     $retryCount = 0
     $completed = $false
-    $enrollmenToken= ""
+    $enrollmentToken= ""
     while (-not $completed) {
         Try {
             $stackVersion = Get-Stack-Version
@@ -111,17 +111,17 @@ function Install-ElasticAgent {
                     throw "No active policies were found. Please create a policy in Kibana Fleet"
                 }
                 Write-Log "Found policy id $azurePolicy" "INFO"
-                $enrollmenToken = Get-EnrollmentToken $kibanaUrl $headers $azurePolicy
+                $enrollmentToken = Get-EnrollmentToken $kibanaUrl $headers $azurePolicy
                 Write-Log "Found enrollment token for policy $azurePolicy" "INFO"
                 if (HasFleetServer("$stackVersion")) {
                     Write-Log "Getting Fleet Server URL" "INFO"
                     $fleetServer = Get-FleetServerUrl $kibanaUrl $headers
                     Write-Log "Installing Elastic Agent and enrolling to Fleet Server $fleetServer" "INFO"
-                    & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --url=$fleetServer --enrollment-token=$enrollmenToken
+                    & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --url=$fleetServer --enrollment-token=$enrollmentToken
                 }
                 else {
                     Write-Log "Installing Elastic Agent and enrolling to Fleet $kibanaUrl" "INFO"
-                    & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --kibana-url=$kibanaUrl --enrollment-token=$enrollmenToken
+                    & "$installLocation\Elastic-Agent\elastic-agent.exe" install -f --kibana-url=$kibanaUrl --enrollment-token=$enrollmentToken
                 }
                 Write-Log "Elastic Agent has been enrolled" "INFO"
             } else {

@@ -503,16 +503,24 @@ function Get-EnrollmentToken($kibanaUrl, $headers, $policyId) {
             Write-Log "$path is not available, trying the next API" "INFO"
             continue
         }
-        $keys = $result.items
-        if ($null -eq $keys) {
-            $keys = $result.list
-        }
         $keyId = $null
-        foreach ($key in $keys) {
-            if ("$($key.active)" -eq "True" -And $key.policy_id -eq $policyId) {
-                $keyId = $key.id
+        $page = 1
+        while ($null -ne $result) {
+            $keys = $result.items
+            if ($null -eq $keys) {
+                $keys = $result.list
+            }
+            foreach ($key in $keys) {
+                if ("$($key.active)" -eq "True" -And $key.policy_id -eq $policyId) {
+                    $keyId = $key.id
+                    break
+                }
+            }
+            if ($keyId -or $result.page -ne $page -or $result.perPage -le 0 -or ($page * $result.perPage) -ge $result.total) {
                 break
             }
+            $page++
+            $result = Invoke-FleetGet $kibanaUrl $headers "${path}?page=$page"
         }
         if (-Not $keyId) {
             throw "No active enrollment token found for policy $policyId"
