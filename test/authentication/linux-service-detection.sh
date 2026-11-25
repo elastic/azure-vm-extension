@@ -34,7 +34,7 @@ systemctl() {
 sudo() { "$@"; }
 log() { :; }
 retry_backoff() { "$@"; }
-is_new_config() { IS_NEW_CONFIG=false; }
+is_new_config() { IS_NEW_CONFIG=$NEW_CONFIG; }
 Install_ElasticAgent() { printf 'install\n' >>"$work/calls"; }
 Start_ElasticAgent() { printf 'start\n' >>"$work/calls"; }
 Reconfigure_Elastic_agent_DEB_RPM() { printf 'reconfigure\n' >>"$work/calls"; }
@@ -43,6 +43,7 @@ expect() {
   CASE=$1
   UNIT_LINE=$2
   ACTIVE=$3
+  NEW_CONFIG=${5:-false}
   local expected=$4 actual
   : >"$work/calls"
   (Run_Agent_DEB_RPM) >/dev/null 2>&1 || fail "Run_Agent_DEB_RPM failed"
@@ -55,6 +56,8 @@ expect "systemd before 246, running unit" \
   'elastic-agent.service loaded active running Elastic Agent' 0 ""
 expect "systemd 246 and later, running unit" \
   '  elastic-agent.service loaded active running Elastic Agent' 0 ""
+expect "systemd 246 and later, running unit with new settings is reconfigured" \
+  '  elastic-agent.service loaded active running Elastic Agent' 0 "reconfigure" true
 expect "systemd 246 and later, stopped unit is started" \
   '  elastic-agent.service loaded inactive dead Elastic Agent' 3 "start"
 expect "systemd 246 and later, failed unit with marker is started" \
